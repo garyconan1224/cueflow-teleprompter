@@ -57,18 +57,7 @@ export function Teleprompter({
     0,
     Math.min(scrollCursor ?? safeCursor, script.length)
   );
-  const { current, after } = splitScriptWindow(script, safeCursor);
-  const beforeScroll = script.slice(0, safeScrollCursor);
-  const betweenScrollAndCurrent =
-    safeScrollCursor <= safeCursor
-      ? script.slice(safeScrollCursor, safeCursor)
-      : "";
-  const beforeCurrent =
-    safeScrollCursor > safeCursor ? script.slice(0, safeCursor) : "";
-  const betweenCurrentAndScroll =
-    safeScrollCursor > safeCursor
-      ? script.slice(safeCursor + current.length, safeScrollCursor)
-      : "";
+  const { before, current, after } = splitScriptWindow(script, safeCursor);
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -209,52 +198,33 @@ export function Teleprompter({
               在左侧输入脚本，这里会实时显示提词器效果。
             </div>
           ) : (
-            <p className="teleprompter__text">
-              {safeScrollCursor <= safeCursor ? (
-                <>
-                  <span
-                    className={
-                      settings.dimReadText
-                        ? "teleprompter__read teleprompter__read--dim"
-                        : "teleprompter__read"
-                    }
-                  >
-                    {beforeScroll}
-                  </span>
-                  <span className="teleprompter__anchor" ref={anchorRef} />
-                  <span className="teleprompter__read">{betweenScrollAndCurrent}</span>
-                  <span className="teleprompter__current">{current}</span>
-                  <span className="teleprompter__upcoming">{after}</span>
-                </>
-              ) : (
-                <>
-                  <span
-                    className={
-                      settings.dimReadText
-                        ? "teleprompter__read teleprompter__read--dim"
-                        : "teleprompter__read"
-                    }
-                  >
-                    {beforeCurrent}
-                  </span>
-                  <span className="teleprompter__current">{current}</span>
-                  <span className="teleprompter__upcoming">
-                    {betweenCurrentAndScroll}
-                  </span>
-                  <span className="teleprompter__anchor" ref={anchorRef} />
-                  <span className="teleprompter__upcoming">
-                    {script.slice(safeScrollCursor)}
-                  </span>
-                </>
-              )}
-            </p>
+            <>
+              <p className="teleprompter__measure" aria-hidden="true">
+                <span>{script.slice(0, safeScrollCursor)}</span>
+                <span className="teleprompter__anchor" ref={anchorRef} />
+                <span>{script.slice(safeScrollCursor)}</span>
+              </p>
+              <p className="teleprompter__text">
+                <span
+                  className={
+                    settings.dimReadText
+                      ? "teleprompter__read teleprompter__read--dim"
+                      : "teleprompter__read"
+                  }
+                >
+                  {before}
+                </span>
+                <span className="teleprompter__current">{current}</span>
+                <span className="teleprompter__upcoming">{after}</span>
+              </p>
+            </>
           )}
         </div>
       </div>
 
       <div className="meta-row teleprompter__hint">
         <span>鼠标滚轮可微调位置，按住 Shift 可大步调整。</span>
-        <span>语音跟读时会在句尾略停，再继续平滑上滑。</span>
+        <span>滚动会平滑追赶，高亮会优先跟上你的朗读位置。</span>
       </div>
 
       <div className="progress-bar" aria-hidden="true">
