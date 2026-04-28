@@ -10,13 +10,13 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from backend.app import config
 from backend.app.asr.audio_buffer import AudioChunkBuffer
 from backend.app.asr.engine import ASRSessionState, StreamingASREngine
+from backend.app.tracking.session import TrackingSession
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
 class ConnectionRuntimeState:
-    script: str = ""
     started: bool = False
 
 
@@ -31,6 +31,7 @@ def create_websocket_router(engine: StreamingASREngine) -> APIRouter:
         audio_buffer = AudioChunkBuffer()
         asr_session = engine.create_session()
         runtime = ConnectionRuntimeState()
+        tracking_session = TrackingSession()
 
         await websocket.send_json({"type": "status", "state": "ready"})
 
@@ -49,6 +50,7 @@ def create_websocket_router(engine: StreamingASREngine) -> APIRouter:
                         audio_buffer=audio_buffer,
                         audio_bytes=audio_bytes,
                         runtime=runtime,
+                        tracking_session=tracking_session,
                     )
                     continue
 
@@ -60,6 +62,7 @@ def create_websocket_router(engine: StreamingASREngine) -> APIRouter:
                         engine=engine,
                         asr_session=asr_session,
                         audio_buffer=audio_buffer,
+                        tracking_session=tracking_session,
                     )
         except WebSocketDisconnect:
             logger.info("WebSocket disconnected from %s", websocket.client)
@@ -76,6 +79,7 @@ def create_websocket_router(engine: StreamingASREngine) -> APIRouter:
                 asr_session=asr_session,
                 audio_buffer=audio_buffer,
                 runtime=runtime,
+                tracking_session=tracking_session,
             )
             logger.info("WebSocket cleanup finished for %s", websocket.client)
 
@@ -90,6 +94,7 @@ async def _handle_control_message(
     engine: StreamingASREngine,
     asr_session: ASRSessionState,
     audio_buffer: AudioChunkBuffer,
+    tracking_session: TrackingSession,
 ) -> None:
     try:
         message = json.loads(payload)
@@ -100,11 +105,13 @@ async def _handle_control_message(
     message_type = message.get("type")
 
     if message_type == "start":
-        runtime.script = str(message.get("script", ""))
+        script = str(message.get("script", ""))
         asr_session.cache.clear()
         audio_buffer.clear()
+        tracking_session.start(script)
         runtime.started = True
         await websocket.send_json({"type": "status", "state": "listening"})
+        await _safe_send_json(websocket, _cursor_payload(tracking_session.cursor, 0, ""))
         return
 
     if message_type == "stop":
@@ -114,26 +121,26 @@ async def _handle_control_message(
             asr_session=asr_session,
             audio_buffer=audio_buffer,
             runtime=runtime,
+            tracking_session=tracking_session,
         )
         runtime.started = False
+        tracking_session.stop()
         return
 
     if message_type == "reset":
         asr_session.cache.clear()
         audio_buffer.clear()
-        runtime.script = ""
+        tracking_session.reset()
+        tracking_session.stop()
         runtime.started = False
         await websocket.send_json({"type": "status", "state": "ready"})
+        await _safe_send_json(websocket, _cursor_payload(tracking_session.cursor, 0, ""))
         return
 
     if message_type == "seek":
-        # Phase 2 先只占位，真正游标处理放到 Phase 4。
-        await websocket.send_json(
-            {
-                "type": "status",
-                "state": "listening" if runtime.started else "ready",
-            }
-        )
+        seek_position = int(message.get("cursor", 0))
+        new_cursor = tracking_session.seek(seek_position)
+        await _safe_send_json(websocket, _cursor_payload(new_cursor, 0, ""))
         return
 
     await websocket.send_json(
@@ -149,6 +156,7 @@ async def _handle_audio_bytes(
     audio_buffer: AudioChunkBuffer,
     audio_bytes: bytes,
     runtime: ConnectionRuntimeState,
+    tracking_session: TrackingSession,
 ) -> None:
     if not runtime.started:
         runtime.started = True
@@ -166,6 +174,16 @@ async def _handle_audio_bytes(
                     "latency_ms": round(result.latency_ms, 1),
                 }
             )
+            cursor_result = tracking_session.add_transcript(result.text, is_final=False)
+            if cursor_result is not None:
+                await _safe_send_json(
+                    websocket,
+                    _cursor_payload(
+                        cursor_result.position,
+                        cursor_result.score,
+                        cursor_result.matched,
+                    ),
+                )
 
 
 async def _flush_tail_audio(
@@ -175,6 +193,7 @@ async def _flush_tail_audio(
     asr_session: ASRSessionState,
     audio_buffer: AudioChunkBuffer,
     runtime: ConnectionRuntimeState,
+    tracking_session: TrackingSession,
 ) -> None:
     if not runtime.started:
         return
@@ -191,8 +210,27 @@ async def _flush_tail_audio(
                     "latency_ms": round(result.latency_ms, 1),
                 },
             )
+            cursor_result = tracking_session.add_transcript(result.text, is_final=True)
+            if cursor_result is not None:
+                await _safe_send_json(
+                    websocket,
+                    _cursor_payload(
+                        cursor_result.position,
+                        cursor_result.score,
+                        cursor_result.matched,
+                    ),
+                )
 
     await _safe_send_json(websocket, {"type": "status", "state": "stopped"})
+
+
+def _cursor_payload(position: int, score: float, matched: str) -> dict[str, Any]:
+    return {
+        "type": "cursor",
+        "position": position,
+        "score": round(score, 1),
+        "matched": matched,
+    }
 
 
 async def _safe_send_json(websocket: WebSocket, payload: dict[str, Any]) -> None:

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { ConnectionPanel } from "./components/ConnectionPanel";
 import { ControlPanel } from "./components/ControlPanel";
 import { ScriptEditor } from "./components/ScriptEditor";
@@ -79,6 +79,16 @@ export default function App() {
   }, [audioCapture, ws.connectionState, audioCapture.isCapturing]);
 
   useEffect(() => {
+    if (ws.cursorPosition === null) {
+      return;
+    }
+    startTransition(() => {
+      setCursor(Math.min(script.length, ws.cursorPosition ?? 0));
+      setIsPlaying(false);
+    });
+  }, [script.length, ws.cursorPosition]);
+
+  useEffect(() => {
     if (!isPlaying) {
       return;
     }
@@ -137,6 +147,23 @@ export default function App() {
     ws.sendControl({ type: "stop" });
   }
 
+  function handleCursorChange(nextCursor: number) {
+    setCursor(nextCursor);
+    setIsPlaying(false);
+    if (ws.connectionState === "connected") {
+      ws.sendControl({ type: "seek", cursor: nextCursor });
+    }
+  }
+
+  function handleResetCursor() {
+    setCursor(0);
+    setIsPlaying(false);
+    if (ws.connectionState === "connected") {
+      ws.sendControl({ type: "reset" });
+      ws.sendControl({ type: "start", script });
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="workspace">
@@ -157,6 +184,9 @@ export default function App() {
           isCapturing={audioCapture.isCapturing}
           transcript={ws.transcript}
           latencyMs={ws.lastLatencyMs}
+          cursorPosition={ws.cursorPosition}
+          matchScore={ws.matchScore}
+          matchedText={ws.matchedText}
           error={audioCapture.error ?? ws.lastError}
           onWsUrlChange={setWsUrl}
           onConnect={() => {
@@ -180,19 +210,17 @@ export default function App() {
           maxCursor={script.length}
           isPlaying={isPlaying}
           settings={settings}
-          onCursorChange={(value) => {
-            setCursor(value);
-            setIsPlaying(false);
-          }}
+          onCursorChange={handleCursorChange}
           onSettingsChange={updateSetting}
           onPlayToggle={() => setIsPlaying((value) => !value)}
-          onResetCursor={() => {
-            setCursor(0);
-            setIsPlaying(false);
-          }}
+          onResetCursor={handleResetCursor}
           onJumpToEnd={() => {
-            setCursor(script.length);
+            const end = script.length;
+            setCursor(end);
             setIsPlaying(false);
+            if (ws.connectionState === "connected") {
+              ws.sendControl({ type: "seek", cursor: end });
+            }
           }}
         />
       </aside>

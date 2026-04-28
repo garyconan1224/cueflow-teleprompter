@@ -11,6 +11,9 @@ type HookState = {
   connectionState: WSConnectionState;
   backendState: BackendState | null;
   transcript: string;
+  cursorPosition: number | null;
+  matchScore: number | null;
+  matchedText: string;
   lastLatencyMs: number | null;
   lastError: string | null;
 };
@@ -19,6 +22,9 @@ const initialState: HookState = {
   connectionState: "idle",
   backendState: null,
   transcript: "",
+  cursorPosition: null,
+  matchScore: null,
+  matchedText: "",
   lastLatencyMs: null,
   lastError: null
 };
@@ -36,6 +42,7 @@ export function useTeleprompterWS() {
 
   async function connect(url: string, script: string) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      sendControl({ type: "start", script });
       return;
     }
 
@@ -73,8 +80,7 @@ export function useTeleprompterWS() {
         wsRef.current = null;
         setState((current) => ({
           ...current,
-          connectionState:
-            current.connectionState === "error" ? "error" : "idle",
+          connectionState: current.connectionState === "error" ? "error" : "idle",
           backendState: null
         }));
       };
@@ -90,8 +96,19 @@ export function useTeleprompterWS() {
           if (payload.type === "transcript") {
             setState((current) => ({
               ...current,
-              transcript: payload.text,
+              transcript: mergeTranscript(current.transcript, payload.text),
               lastLatencyMs: payload.latency_ms ?? current.lastLatencyMs
+            }));
+            return;
+          }
+
+          if (payload.type === "cursor") {
+            setState((current) => ({
+              ...current,
+              cursorPosition: payload.position,
+              matchScore:
+                payload.score !== undefined ? payload.score : current.matchScore,
+              matchedText: payload.matched ?? current.matchedText
             }));
             return;
           }
@@ -140,6 +157,8 @@ export function useTeleprompterWS() {
     setState((current) => ({
       ...current,
       transcript: "",
+      matchedText: "",
+      matchScore: null,
       lastLatencyMs: null,
       lastError: null
     }));
@@ -153,4 +172,14 @@ export function useTeleprompterWS() {
     sendAudioFrame,
     clearTranscript
   };
+}
+
+function mergeTranscript(current: string, next: string) {
+  if (!current) {
+    return next;
+  }
+  if (!next || current.endsWith(next)) {
+    return current;
+  }
+  return `${current}${next}`;
 }

@@ -1,0 +1,45 @@
+from __future__ import annotations
+
+import unittest
+
+from backend.app.tracking.matcher import update_cursor
+
+
+class MatcherTests(unittest.TestCase):
+    def test_cursor_advances_on_match(self) -> None:
+        script = "现在进入示例朗读欢迎大家来体验达摩院推出的语音识别模型后面还有一点补充内容"
+        result = update_cursor(
+            script=script,
+            cursor=0,
+            recent_text="欢迎大家来体验达摩院推出的语音识别模型",
+            fail_count=0,
+        )
+        self.assertTrue(result.updated)
+        self.assertGreater(result.position, 0)
+        self.assertGreaterEqual(result.score, 70)
+
+    def test_low_score_does_not_advance_cursor(self) -> None:
+        script = "第一段内容第二段内容第三段内容"
+        result = update_cursor(
+            script=script,
+            cursor=10,
+            recent_text="完全不相关的句子",
+            fail_count=0,
+        )
+        self.assertFalse(result.updated)
+        self.assertEqual(result.position, 10)
+
+    def test_fail_count_expands_search_window(self) -> None:
+        script = "起点" + ("填充" * 80) + "目标句子在这里"
+        result = update_cursor(
+            script=script,
+            cursor=0,
+            recent_text="目标句子在这里",
+            fail_count=5,
+        )
+        self.assertTrue(result.updated)
+        self.assertGreater(result.position, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

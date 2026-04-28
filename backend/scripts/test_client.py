@@ -17,13 +17,15 @@ if str(REPO_ROOT) not in sys.path:
 
 from backend.app import config
 
-DEFAULT_WAV_PATH = (
-    config.LOCAL_STREAMING_MODEL_DIR / "example" / "asr_example.wav"
+DEFAULT_WAV_PATH = config.LOCAL_STREAMING_MODEL_DIR / "example" / "asr_example.wav"
+DEFAULT_TEST_SCRIPT = (
+    "现在进入示例朗读。欢迎大家来体验达摩院推出的语音识别模型。"
+    "这句话前面和后面都额外保留了一些文本，用来验证游标会跟着识别结果稳定推进。"
 )
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Phase 2 WebSocket ASR test client")
+    parser = argparse.ArgumentParser(description="Phase 4 WebSocket ASR test client")
     parser.add_argument(
         "--ws-url",
         default="ws://127.0.0.1:8000/ws/teleprompter",
@@ -33,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         "--wav",
         default=str(DEFAULT_WAV_PATH),
         help="16kHz 单声道 16-bit PCM wav 文件路径",
+    )
+    parser.add_argument(
+        "--script",
+        default=DEFAULT_TEST_SCRIPT,
+        help="发送给后端用于游标追踪的脚本文本",
     )
     parser.add_argument(
         "--realtime",
@@ -47,7 +54,7 @@ async def receive_messages(ws: websockets.WebSocketClientProtocol) -> None:
         try:
             payload = json.loads(message)
         except json.JSONDecodeError:
-            print("[server] 非 JSON 消息:", message)
+            print("[server] non-json:", message)
             continue
         print("[server]", json.dumps(payload, ensure_ascii=False))
 
@@ -78,6 +85,7 @@ async def main() -> int:
 
     chunks = iter_pcm_chunks(wav_path)
     print(f"准备发送 {len(chunks)} 个音频块，文件: {wav_path}")
+    print(f"测试脚本: {args.script}")
 
     async with websockets.connect(args.ws_url, max_size=2**22) as ws:
         receiver = asyncio.create_task(receive_messages(ws))
@@ -86,7 +94,7 @@ async def main() -> int:
             json.dumps(
                 {
                     "type": "start",
-                    "script": "Phase 2 test client script placeholder",
+                    "script": args.script,
                 },
                 ensure_ascii=False,
             )

@@ -8,6 +8,9 @@ type ConnectionPanelProps = {
   isCapturing: boolean;
   transcript: string;
   latencyMs: number | null;
+  cursorPosition: number | null;
+  matchScore: number | null;
+  matchedText: string;
   error: string | null;
   onWsUrlChange: (value: string) => void;
   onConnect: () => void;
@@ -41,6 +44,9 @@ export function ConnectionPanel({
   isCapturing,
   transcript,
   latencyMs,
+  cursorPosition,
+  matchScore,
+  matchedText,
   error,
   onWsUrlChange,
   onConnect,
@@ -103,8 +109,17 @@ export function ConnectionPanel({
         </span>
       </div>
 
+      <div className="meta-row">
+        <span>实时游标: {cursorPosition ?? 0}</span>
+        <span>匹配分数: {matchScore !== null ? matchScore.toFixed(1) : "暂无"}</span>
+      </div>
+
       <div className="transcript-box">
         {transcript || "这里会显示后端返回的实时识别文本。"}
+      </div>
+
+      <div className="debug-box">
+        {matchedText || "这里会显示最近一次用于推进游标的匹配片段。"}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}

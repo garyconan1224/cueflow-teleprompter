@@ -227,6 +227,19 @@ h2 {
   white-space: pre-wrap;
 }
 
+.debug-box {
+  margin-top: 10px;
+  min-height: 68px;
+  border: 1px dashed rgba(184, 111, 41, 0.22);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(255, 250, 239, 0.72);
+  color: rgba(70, 44, 20, 0.78);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  font-size: 13px;
+}
+
 .error-text {
   margin: 12px 0 0;
   color: #9e321f;

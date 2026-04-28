@@ -64,7 +64,9 @@ export function Teleprompter({
         </div>
         <div className="stage__meta">
           <span>进度 {progress.toFixed(1)}%</span>
-          <span>游标 {safeCursor}/{script.length}</span>
+          <span>
+            游标 {safeCursor}/{script.length}
+          </span>
         </div>
       </div>
 
