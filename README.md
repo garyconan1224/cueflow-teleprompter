@@ -4,6 +4,12 @@
 
 浏览器负责编辑脚本、采集麦克风和显示提词器；后端负责流式语音识别、游标追踪，并通过 WebSocket 把当前位置实时推回前端，让提词内容跟着朗读自动上滑。
 
+## 仓库信息
+
+- 仓库地址：`https://github.com/garyconan1224/cueflow-teleprompter`
+- 开源协议：`MIT`
+- GitHub 页面配置建议见 [GITHUB_REPO_SETUP.md](GITHUB_REPO_SETUP.md)
+
 ## 当前已完成
 
 - `Phase 1` 本地麦克风 ASR 单点验证
@@ -146,6 +152,7 @@ npm.cmd run test:e2e
 - 模型缓存（如果当前目录里已有 `.modelscope_cache`）
 - 启动脚本
 - 安装依赖脚本
+- `LICENSE`
 - 新电脑迁移说明文档
 
 ## 目录说明

@@ -25,6 +25,8 @@ Copy-Item -LiteralPath (Join-Path $projectRoot "backend") -Destination $bundleRo
 Copy-Item -LiteralPath (Join-Path $projectRoot "frontend\dist") -Destination (Join-Path $bundleFrontend "dist") -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot "requirements.txt") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "README.md") -Destination $bundleRoot
+Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination $bundleRoot
+Copy-Item -LiteralPath (Join-Path $projectRoot "GITHUB_REPO_SETUP.md") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "TRANSFER_TO_NEW_PC.md") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "phase1_asr_test.py") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "run_portable_app.bat") -Destination $bundleRoot
