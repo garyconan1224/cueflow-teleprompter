@@ -215,11 +215,11 @@ export function ControlPanel({
       />
       <SliderRow
         label="视窗高度"
-        min={320}
-        max={980}
-        step={10}
+        min={45}
+        max={100}
+        step={1}
         value={settings.viewportHeight}
-        suffix="px"
+        suffix="%"
         onChange={(value) => onSettingsChange("viewportHeight", value)}
       />
       <SliderRow

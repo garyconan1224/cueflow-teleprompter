@@ -106,6 +106,25 @@ textarea {
   padding: 24px;
 }
 
+.stage:fullscreen {
+  width: 100vw;
+  max-width: none;
+  min-height: 100vh;
+  padding: 20px 24px 16px;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage:fullscreen .teleprompter {
+  margin-top: 18px;
+  border-radius: 20px;
+}
+
+.stage:fullscreen .progress-bar {
+  margin-top: 12px;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   text-transform: uppercase;
@@ -430,6 +449,11 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.display-window .stage {
+  width: min(100%, 1800px);
+  min-height: calc(100vh - 44px);
 }
 
 @media (max-width: 1024px) {

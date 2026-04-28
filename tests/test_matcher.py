@@ -55,6 +55,15 @@ class MatcherTests(unittest.TestCase):
         self.assertTrue(result.updated)
         self.assertLessEqual(result.position, script.index("。"))
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_partial_match_can_continue_after_reaching_boundary(self) -> None:
+        script = "第一句结束。第二句正在继续推进。"
+        boundary = script.index("。")
+        result = update_cursor(
+            script=script,
+            cursor=boundary,
+            recent_text="第二句正在继续推",
+            fail_count=0,
+            is_final=False,
+        )
+        self.assertTrue(result.updated)
+        self.assertGreater(result.position, boundary)

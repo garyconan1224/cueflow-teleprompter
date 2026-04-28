@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { TeleprompterSettings } from "../types/messages";
 
 type TeleprompterProps = {
@@ -68,7 +69,9 @@ export function Teleprompter({
     settings.lineHeight,
     settings.textWidth,
     settings.letterSpacing,
-    settings.viewportHeight
+    settings.viewportHeight,
+    isFullscreen,
+    compactHeader
   ]);
 
   const progress = script.length > 0 ? (safeCursor / script.length) * 100 : 0;
@@ -76,6 +79,16 @@ export function Teleprompter({
     settings.fontPreset === "sans"
       ? '"Aptos","Segoe UI","Microsoft YaHei",sans-serif'
       : '"Georgia","Times New Roman","SimSun",serif';
+
+  const viewportStyle = useMemo<CSSProperties>(() => {
+    if (isFullscreen || compactHeader) {
+      return { height: "calc(100vh - 140px)" };
+    }
+
+    return {
+      height: `min(${settings.viewportHeight}vh, calc(100vh - 180px))`
+    };
+  }, [compactHeader, isFullscreen, settings.viewportHeight]);
 
   async function toggleFullscreen() {
     const stage = stageRef.current;
@@ -113,11 +126,7 @@ export function Teleprompter({
         </div>
       </div>
 
-      <div
-        className="teleprompter"
-        ref={viewportRef}
-        style={{ height: `${settings.viewportHeight}px` }}
-      >
+      <div className="teleprompter" ref={viewportRef} style={viewportStyle}>
         <div
           className="teleprompter__guide"
           style={{ top: `${settings.anchorRatio * 100}%` }}

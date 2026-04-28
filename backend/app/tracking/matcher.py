@@ -145,17 +145,26 @@ def _clamp_for_sentence_boundary(
     if proposed_cursor <= cursor:
         return proposed_cursor
 
-    for index in range(cursor, min(proposed_cursor, len(script))):
+    current = _skip_consumed_boundaries(script, cursor)
+    if proposed_cursor <= current:
+        return proposed_cursor
+
+    for index in range(current, min(proposed_cursor, len(script))):
         if script[index] not in config.SENTENCE_ENDINGS:
             continue
 
         boundary_after = index + 1
-        if not is_final:
-            return min(proposed_cursor, index)
+        if not is_final and cursor < index and match_end_position < boundary_after:
+            return index
 
-        # Final results may cross the sentence end only after the match itself
-        # has actually reached that boundary, not only because of lookahead push.
-        if match_end_position < boundary_after:
-            return min(proposed_cursor, index)
+        if is_final and match_end_position < boundary_after:
+            return index
 
     return proposed_cursor
+
+
+def _skip_consumed_boundaries(script: str, cursor: int) -> int:
+    index = max(0, min(cursor, len(script)))
+    while index < len(script) and script[index] in config.SENTENCE_ENDINGS:
+        index += 1
+    return index

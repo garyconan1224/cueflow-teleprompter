@@ -33,7 +33,7 @@ type DisplaySyncMessage =
 const defaultSettings: TeleprompterSettings = {
   fontSize: 42,
   lineHeight: 1.6,
-  viewportHeight: 560,
+  viewportHeight: 72,
   anchorRatio: 0.32,
   transitionMs: 360,
   textWidth: 84,
@@ -55,6 +55,19 @@ const defaultSettings: TeleprompterSettings = {
   currentAccentColor: "#ffbe72"
 };
 
+function migrateViewportHeight(rawValue: unknown) {
+  if (typeof rawValue !== "number" || Number.isNaN(rawValue)) {
+    return defaultSettings.viewportHeight;
+  }
+
+  if (rawValue <= 100) {
+    return Math.min(100, Math.max(45, Math.round(rawValue)));
+  }
+
+  const estimatedPercent = Math.round(rawValue / 9);
+  return Math.min(100, Math.max(45, estimatedPercent));
+}
+
 function loadSettings(): TeleprompterSettings {
   const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
   if (!raw) {
@@ -62,7 +75,12 @@ function loadSettings(): TeleprompterSettings {
   }
 
   try {
-    return { ...defaultSettings, ...JSON.parse(raw) } as TeleprompterSettings;
+    const parsed = JSON.parse(raw) as Partial<TeleprompterSettings>;
+    return {
+      ...defaultSettings,
+      ...parsed,
+      viewportHeight: migrateViewportHeight(parsed.viewportHeight)
+    };
   } catch {
     return defaultSettings;
   }
@@ -235,7 +253,7 @@ export default function App() {
 
   const summary = useMemo(() => {
     const completion = script.length ? Math.round((cursor / script.length) * 100) : 0;
-    return `进度 ${completion}% · 字号 ${settings.fontSize}px · 视窗 ${settings.viewportHeight}px`;
+    return `进度 ${completion}% · 字号 ${settings.fontSize}px · 视窗 ${settings.viewportHeight}%`;
   }, [cursor, script.length, settings.fontSize, settings.viewportHeight]);
 
   const appStyle = useMemo(
@@ -274,6 +292,8 @@ export default function App() {
   }
 
   async function handleStartMic() {
+    setIsPlaying(false);
+
     if (ws.connectionState !== "connected") {
       await ws.connect(wsUrl, script);
     } else {
