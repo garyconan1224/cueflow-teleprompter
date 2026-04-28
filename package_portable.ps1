@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $releaseRoot = Join-Path $projectRoot "release"
 $bundleRoot = Join-Path $releaseRoot "voice_teleprompter_portable"
+$zipPath = Join-Path $releaseRoot "voice_teleprompter_portable.zip"
 
 Write-Host "[1/4] Build frontend..."
 Push-Location (Join-Path $projectRoot "frontend")
@@ -23,6 +24,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot "backend") -Destination $bundleRo
 Copy-Item -LiteralPath (Join-Path $projectRoot "frontend\dist") -Destination (Join-Path $bundleFrontend "dist") -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot "requirements.txt") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "README.md") -Destination $bundleRoot
+Copy-Item -LiteralPath (Join-Path $projectRoot "TRANSFER_TO_NEW_PC.md") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "phase1_asr_test.py") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "run_portable_app.bat") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "setup_portable_env.bat") -Destination $bundleRoot
@@ -34,8 +36,16 @@ if (Test-Path $modelCache) {
   Copy-Item -LiteralPath $modelCache -Destination $bundleRoot -Recurse
 }
 
-Write-Host "[4/4] Bundle ready:"
+Write-Host "[4/4] Create zip archive..."
+if (Test-Path $zipPath) {
+  Remove-Item -LiteralPath $zipPath -Force
+}
+Compress-Archive -LiteralPath $bundleRoot -DestinationPath $zipPath
+
+Write-Host "Bundle folder:"
 Write-Host $bundleRoot
+Write-Host "Bundle zip:"
+Write-Host $zipPath
 Write-Host ""
 Write-Host "Next:"
 Write-Host "  1. Copy the folder to another Windows location or machine."
