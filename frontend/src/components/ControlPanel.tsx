@@ -232,8 +232,8 @@ export function ControlPanel({
       />
       <SliderRow
         label="滚动时长"
-        min={120}
-        max={1200}
+        min={60}
+        max={320}
         step={10}
         value={settings.transitionMs}
         suffix="ms"
@@ -315,11 +315,6 @@ export function ControlPanel({
             onChange={(value) => onSettingsChange("readTextColor", value)}
           />
           <ColorRow
-            label="当前文字颜色"
-            value={settings.currentTextColor}
-            onChange={(value) => onSettingsChange("currentTextColor", value)}
-          />
-          <ColorRow
             label="未读文字颜色"
             value={settings.upcomingTextColor}
             onChange={(value) => onSettingsChange("upcomingTextColor", value)}
@@ -328,11 +323,6 @@ export function ControlPanel({
             label="定位线颜色"
             value={settings.guideColor}
             onChange={(value) => onSettingsChange("guideColor", value)}
-          />
-          <ColorRow
-            label="当前高亮颜色"
-            value={settings.currentAccentColor}
-            onChange={(value) => onSettingsChange("currentAccentColor", value)}
           />
         </div>
       </div>

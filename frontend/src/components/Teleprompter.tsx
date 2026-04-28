@@ -11,13 +11,11 @@ type TeleprompterProps = {
   compactHeader?: boolean;
 };
 
-const CURRENT_WINDOW = 28;
-
 export function Teleprompter({
   script,
   cursor,
   settings,
-  title = "智能提词器调参台",
+  title = "智能提词器",
   showFullscreenButton = true,
   compactHeader = false
 }: TeleprompterProps) {
@@ -30,8 +28,7 @@ export function Teleprompter({
 
   const safeCursor = Math.max(0, Math.min(cursor, script.length));
   const before = script.slice(0, safeCursor);
-  const current = script.slice(safeCursor, safeCursor + CURRENT_WINDOW) || " ";
-  const after = script.slice(safeCursor + CURRENT_WINDOW);
+  const after = script.slice(safeCursor);
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -61,8 +58,7 @@ export function Teleprompter({
     );
     setTranslateY(target);
   }, [
-    before.length,
-    current.length,
+    safeCursor,
     script,
     settings.anchorRatio,
     settings.fontSize,
@@ -136,7 +132,7 @@ export function Teleprompter({
           ref={contentRef}
           style={{
             transform: `translateY(-${translateY}px)`,
-            transitionDuration: `${settings.transitionMs}ms`,
+            transitionDuration: `${Math.min(settings.transitionMs, 180)}ms`,
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
             maxWidth: `${settings.textWidth}%`,
@@ -160,7 +156,6 @@ export function Teleprompter({
                 {before}
               </span>
               <span className="teleprompter__anchor" ref={anchorRef} />
-              <span className="teleprompter__current">{current}</span>
               <span className="teleprompter__upcoming">{after}</span>
             </p>
           )}

@@ -35,7 +35,7 @@ const defaultSettings: TeleprompterSettings = {
   lineHeight: 1.6,
   viewportHeight: 72,
   anchorRatio: 0.32,
-  transitionMs: 360,
+  transitionMs: 160,
   textWidth: 84,
   letterSpacing: 1.2,
   dimReadText: true,
@@ -68,6 +68,13 @@ function migrateViewportHeight(rawValue: unknown) {
   return Math.min(100, Math.max(45, estimatedPercent));
 }
 
+function migrateTransitionMs(rawValue: unknown) {
+  if (typeof rawValue !== "number" || Number.isNaN(rawValue)) {
+    return defaultSettings.transitionMs;
+  }
+  return Math.min(180, Math.max(60, Math.round(rawValue)));
+}
+
 function loadSettings(): TeleprompterSettings {
   const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
   if (!raw) {
@@ -79,7 +86,8 @@ function loadSettings(): TeleprompterSettings {
     return {
       ...defaultSettings,
       ...parsed,
-      viewportHeight: migrateViewportHeight(parsed.viewportHeight)
+      viewportHeight: migrateViewportHeight(parsed.viewportHeight),
+      transitionMs: migrateTransitionMs(parsed.transitionMs)
     };
   } catch {
     return defaultSettings;
