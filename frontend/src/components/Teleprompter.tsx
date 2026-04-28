@@ -5,6 +5,7 @@ import type { TeleprompterSettings } from "../types/messages";
 type TeleprompterProps = {
   script: string;
   cursor: number;
+  scrollCursor?: number;
   settings: TeleprompterSettings;
   title?: string;
   showFullscreenButton?: boolean;
@@ -16,8 +17,9 @@ const CURRENT_WINDOW_SIZE = 18;
 const SENTENCE_ENDINGS = /[。！？；!?;,，]/;
 
 function splitScriptWindow(script: string, cursor: number) {
-  const before = script.slice(0, cursor);
-  const upcoming = script.slice(cursor);
+  const safeCursor = Math.max(0, Math.min(cursor, script.length));
+  const before = script.slice(0, safeCursor);
+  const upcoming = script.slice(safeCursor);
   const sentenceBreakIndex = upcoming
     .slice(0, CURRENT_WINDOW_SIZE + 12)
     .search(SENTENCE_ENDINGS);
@@ -36,6 +38,7 @@ function splitScriptWindow(script: string, cursor: number) {
 export function Teleprompter({
   script,
   cursor,
+  scrollCursor,
   settings,
   title = "智能提词器",
   showFullscreenButton = true,
@@ -50,7 +53,22 @@ export function Teleprompter({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const safeCursor = Math.max(0, Math.min(cursor, script.length));
-  const { before, current, after } = splitScriptWindow(script, safeCursor);
+  const safeScrollCursor = Math.max(
+    0,
+    Math.min(scrollCursor ?? safeCursor, script.length)
+  );
+  const { current, after } = splitScriptWindow(script, safeCursor);
+  const beforeScroll = script.slice(0, safeScrollCursor);
+  const betweenScrollAndCurrent =
+    safeScrollCursor <= safeCursor
+      ? script.slice(safeScrollCursor, safeCursor)
+      : "";
+  const beforeCurrent =
+    safeScrollCursor > safeCursor ? script.slice(0, safeCursor) : "";
+  const betweenCurrentAndScroll =
+    safeScrollCursor > safeCursor
+      ? script.slice(safeCursor + current.length, safeScrollCursor)
+      : "";
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -80,7 +98,7 @@ export function Teleprompter({
     );
     setTranslateY(target);
   }, [
-    safeCursor,
+    safeScrollCursor,
     script,
     settings.anchorRatio,
     settings.fontSize,
@@ -192,18 +210,43 @@ export function Teleprompter({
             </div>
           ) : (
             <p className="teleprompter__text">
-              <span
-                className={
-                  settings.dimReadText
-                    ? "teleprompter__read teleprompter__read--dim"
-                    : "teleprompter__read"
-                }
-              >
-                {before}
-              </span>
-              <span className="teleprompter__anchor" ref={anchorRef} />
-              <span className="teleprompter__current">{current}</span>
-              <span className="teleprompter__upcoming">{after}</span>
+              {safeScrollCursor <= safeCursor ? (
+                <>
+                  <span
+                    className={
+                      settings.dimReadText
+                        ? "teleprompter__read teleprompter__read--dim"
+                        : "teleprompter__read"
+                    }
+                  >
+                    {beforeScroll}
+                  </span>
+                  <span className="teleprompter__anchor" ref={anchorRef} />
+                  <span className="teleprompter__read">{betweenScrollAndCurrent}</span>
+                  <span className="teleprompter__current">{current}</span>
+                  <span className="teleprompter__upcoming">{after}</span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className={
+                      settings.dimReadText
+                        ? "teleprompter__read teleprompter__read--dim"
+                        : "teleprompter__read"
+                    }
+                  >
+                    {beforeCurrent}
+                  </span>
+                  <span className="teleprompter__current">{current}</span>
+                  <span className="teleprompter__upcoming">
+                    {betweenCurrentAndScroll}
+                  </span>
+                  <span className="teleprompter__anchor" ref={anchorRef} />
+                  <span className="teleprompter__upcoming">
+                    {script.slice(safeScrollCursor)}
+                  </span>
+                </>
+              )}
             </p>
           )}
         </div>

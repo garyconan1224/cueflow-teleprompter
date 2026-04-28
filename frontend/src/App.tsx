@@ -120,30 +120,33 @@ function clampCursor(value: number, scriptLength: number) {
 
 function getCursorStep(delta: number) {
   const distance = Math.abs(delta);
-  if (distance >= 40) {
-    return 8;
+  if (distance >= 80) {
+    return 30;
   }
-  if (distance >= 22) {
+  if (distance >= 40) {
+    return 18;
+  }
+  if (distance >= 18) {
+    return 10;
+  }
+  if (distance >= 8) {
     return 5;
   }
-  if (distance >= 10) {
-    return 3;
-  }
-  return 1;
+  return 2;
 }
 
 function getTransitionDuration(target: number, visible: number) {
   const distance = Math.abs(target - visible);
-  if (distance >= 40) {
-    return 220;
+  if (distance >= 50) {
+    return 120;
   }
-  if (distance >= 18) {
-    return 180;
+  if (distance >= 24) {
+    return 105;
   }
   if (distance >= 8) {
-    return 140;
+    return 90;
   }
-  return 110;
+  return 70;
 }
 
 function isBoundaryCharacter(char: string | undefined) {
@@ -313,7 +316,7 @@ export default function App() {
       isBoundaryCharacter(previousChar) &&
       lastHeldBoundaryRef.current !== nextCursor;
 
-    const nextDelay = shouldHoldAtBoundary ? 170 : 40;
+    const nextDelay = shouldHoldAtBoundary && Math.abs(delta) <= 10 ? 90 : 12;
     const nextTransitionMs = inVoiceFollow
       ? getTransitionDuration(cursor, displayCursor)
       : Math.min(settings.transitionMs, 180);
@@ -580,6 +583,7 @@ export default function App() {
         <Teleprompter
           script={script}
           cursor={displayCursor}
+          scrollCursor={displayCursor}
           settings={teleprompterSettings}
           title="副屏提词器"
           compactHeader
@@ -662,7 +666,8 @@ export default function App() {
       <main className="preview">
         <Teleprompter
           script={script}
-          cursor={displayCursor}
+          cursor={cursor}
+          scrollCursor={displayCursor}
           settings={teleprompterSettings}
           onCursorNudge={handleCursorNudge}
         />
