@@ -178,7 +178,7 @@ export function Teleprompter({
           ref={contentRef}
           style={{
             transform: `translateY(-${translateY}px)`,
-            transitionDuration: `${Math.min(settings.transitionMs, 220)}ms`,
+            transitionDuration: `${Math.min(settings.transitionMs, 240)}ms`,
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
             maxWidth: `${settings.textWidth}%`,
@@ -209,9 +209,9 @@ export function Teleprompter({
         </div>
       </div>
 
-      <div className="meta-row">
+      <div className="meta-row teleprompter__hint">
         <span>鼠标滚轮可微调位置，按住 Shift 可大步调整。</span>
-        <span>自动跟读会尽量把当前朗读位置停在虚线附近。</span>
+        <span>语音跟读时会在句尾略停，再继续平滑上滑。</span>
       </div>
 
       <div className="progress-bar" aria-hidden="true">

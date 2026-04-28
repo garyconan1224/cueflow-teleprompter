@@ -23,6 +23,7 @@ const SETTINGS_STORAGE_KEY = "voice-teleprompter:settings";
 const SCRIPT_STORAGE_KEY = "voice-teleprompter:script";
 const WS_URL_STORAGE_KEY = "voice-teleprompter:ws-url";
 const DISPLAY_CHANNEL_NAME = "voice-teleprompter-display-sync";
+const SENTENCE_BOUNDARY = /[。！？；!?;,，\n]/;
 
 type DisplaySyncPayload = {
   script: string;
@@ -117,17 +118,54 @@ function clampCursor(value: number, scriptLength: number) {
   return Math.max(0, Math.min(value, scriptLength));
 }
 
+function getCursorStep(delta: number) {
+  const distance = Math.abs(delta);
+  if (distance >= 40) {
+    return 8;
+  }
+  if (distance >= 22) {
+    return 5;
+  }
+  if (distance >= 10) {
+    return 3;
+  }
+  return 1;
+}
+
+function getTransitionDuration(target: number, visible: number) {
+  const distance = Math.abs(target - visible);
+  if (distance >= 40) {
+    return 220;
+  }
+  if (distance >= 18) {
+    return 180;
+  }
+  if (distance >= 8) {
+    return 140;
+  }
+  return 110;
+}
+
+function isBoundaryCharacter(char: string | undefined) {
+  return !!char && SENTENCE_BOUNDARY.test(char);
+}
+
 export default function App() {
   const displayOnly = isDisplayOnlyWindow();
   const [script, setScript] = useState(loadScript);
-  const [settings, setSettings] = useState(loadSettings);
   const [cursor, setCursor] = useState(0);
+  const [displayCursor, setDisplayCursor] = useState(0);
+  const [settings, setSettings] = useState(loadSettings);
   const [isPlaying, setIsPlaying] = useState(false);
   const [wsUrl, setWsUrl] = useState(loadWsUrl);
   const [isDisplayWindowOpen, setIsDisplayWindowOpen] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [dynamicTransitionMs, setDynamicTransitionMs] = useState(
+    defaultSettings.transitionMs
+  );
   const channelRef = useRef<BroadcastChannel | null>(null);
   const displayWindowRef = useRef<Window | null>(null);
+  const lastHeldBoundaryRef = useRef(-1);
   const sharedStateRef = useRef<DisplaySyncPayload>({
     script,
     cursor,
@@ -152,6 +190,7 @@ export default function App() {
           startTransition(() => {
             setScript(data.payload.script);
             setCursor(data.payload.cursor);
+            setDisplayCursor(data.payload.cursor);
             setSettings(data.payload.settings);
           });
         }
@@ -212,7 +251,10 @@ export default function App() {
     if (cursor > script.length) {
       setCursor(script.length);
     }
-  }, [cursor, displayOnly, script]);
+    if (displayCursor > script.length) {
+      setDisplayCursor(script.length);
+    }
+  }, [cursor, displayCursor, displayOnly, script]);
 
   useEffect(() => {
     if (displayOnly) {
@@ -249,6 +291,60 @@ export default function App() {
   }, [displayOnly, script.length, ws.cursorPosition]);
 
   useEffect(() => {
+    if (displayOnly) {
+      setDisplayCursor(cursor);
+      return;
+    }
+
+    if (displayCursor === cursor) {
+      return;
+    }
+
+    const delta = cursor - displayCursor;
+    const direction = Math.sign(delta);
+    const step = getCursorStep(delta) * direction;
+    const nextCursor = clampCursor(displayCursor + step, script.length);
+    const previousChar = script[Math.max(0, nextCursor - 1)];
+    const inVoiceFollow =
+      ws.backendState === "listening" && audioCapture.isCapturing && !isPlaying;
+    const shouldHoldAtBoundary =
+      inVoiceFollow &&
+      direction > 0 &&
+      isBoundaryCharacter(previousChar) &&
+      lastHeldBoundaryRef.current !== nextCursor;
+
+    const nextDelay = shouldHoldAtBoundary ? 170 : 40;
+    const nextTransitionMs = inVoiceFollow
+      ? getTransitionDuration(cursor, displayCursor)
+      : Math.min(settings.transitionMs, 180);
+
+    const timer = window.setTimeout(() => {
+      if (shouldHoldAtBoundary) {
+        lastHeldBoundaryRef.current = nextCursor;
+      }
+      setDynamicTransitionMs(nextTransitionMs);
+      setDisplayCursor(nextCursor);
+    }, nextDelay);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    audioCapture.isCapturing,
+    cursor,
+    displayCursor,
+    displayOnly,
+    isPlaying,
+    script,
+    settings.transitionMs,
+    ws.backendState
+  ]);
+
+  useEffect(() => {
+    if (displayCursor >= cursor) {
+      lastHeldBoundaryRef.current = -1;
+    }
+  }, [cursor, displayCursor]);
+
+  useEffect(() => {
     if (displayOnly || !isPlaying) {
       return;
     }
@@ -269,9 +365,11 @@ export default function App() {
   }, [displayOnly, isPlaying, script.length, settings.previewSpeed]);
 
   const summary = useMemo(() => {
-    const completion = script.length ? Math.round((cursor / script.length) * 100) : 0;
+    const completion = script.length
+      ? Math.round((displayCursor / script.length) * 100)
+      : 0;
     return `进度 ${completion}% · 字号 ${settings.fontSize}px · 视窗 ${settings.viewportHeight}%`;
-  }, [cursor, script.length, settings.fontSize, settings.viewportHeight]);
+  }, [displayCursor, script.length, settings.fontSize, settings.viewportHeight]);
 
   const appStyle = useMemo(
     () =>
@@ -289,6 +387,14 @@ export default function App() {
         "--teleprompter-current-accent": settings.currentAccentColor
       }) as CSSProperties,
     [settings]
+  );
+
+  const teleprompterSettings = useMemo(
+    () => ({
+      ...settings,
+      transitionMs: dynamicTransitionMs
+    }),
+    [dynamicTransitionMs, settings]
   );
 
   const appMode = useMemo<AppMode>(() => {
@@ -328,8 +434,11 @@ export default function App() {
   function replaceScript(nextScript: string) {
     setScript(nextScript);
     setCursor(0);
+    setDisplayCursor(0);
     setIsPlaying(false);
     setManualError(null);
+    setDynamicTransitionMs(defaultSettings.transitionMs);
+    lastHeldBoundaryRef.current = -1;
 
     if (ws.connectionState === "connected") {
       ws.sendControl({ type: "start", script: nextScript });
@@ -375,6 +484,7 @@ export default function App() {
   async function handleStartMic() {
     setIsPlaying(false);
     setManualError(null);
+    lastHeldBoundaryRef.current = -1;
 
     try {
       if (ws.connectionState !== "connected") {
@@ -409,6 +519,7 @@ export default function App() {
     const safeValue = clampCursor(nextCursor, script.length);
     setCursor(safeValue);
     setIsPlaying(false);
+    lastHeldBoundaryRef.current = -1;
     if (ws.connectionState === "connected") {
       ws.sendControl({ type: "seek", cursor: safeValue });
     }
@@ -424,8 +535,11 @@ export default function App() {
 
   function handleResetCursor() {
     setCursor(0);
+    setDisplayCursor(0);
     setIsPlaying(false);
     setManualError(null);
+    setDynamicTransitionMs(defaultSettings.transitionMs);
+    lastHeldBoundaryRef.current = -1;
     if (ws.connectionState === "connected") {
       ws.sendControl({ type: "reset" });
       ws.sendControl({ type: "start", script });
@@ -465,8 +579,8 @@ export default function App() {
       <div className="display-window" style={appStyle}>
         <Teleprompter
           script={script}
-          cursor={cursor}
-          settings={settings}
+          cursor={displayCursor}
+          settings={teleprompterSettings}
           title="副屏提词器"
           compactHeader
         />
@@ -499,7 +613,7 @@ export default function App() {
           isCapturing={audioCapture.isCapturing}
           transcript={ws.transcript}
           latencyMs={ws.lastLatencyMs}
-          cursorPosition={ws.cursorPosition}
+          cursorPosition={cursor}
           matchScore={ws.matchScore}
           matchedText={ws.matchedText}
           isCursorLost={ws.isCursorLost}
@@ -548,8 +662,8 @@ export default function App() {
       <main className="preview">
         <Teleprompter
           script={script}
-          cursor={cursor}
-          settings={settings}
+          cursor={displayCursor}
+          settings={teleprompterSettings}
           onCursorNudge={handleCursorNudge}
         />
       </main>
