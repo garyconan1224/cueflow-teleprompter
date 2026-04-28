@@ -19,10 +19,10 @@ import type {
 } from "./types/messages";
 import { sampleScript } from "./utils/sampleScript";
 
-const SETTINGS_STORAGE_KEY = "voice-teleprompter:settings";
-const SCRIPT_STORAGE_KEY = "voice-teleprompter:script";
-const WS_URL_STORAGE_KEY = "voice-teleprompter:ws-url";
-const DISPLAY_CHANNEL_NAME = "voice-teleprompter-display-sync";
+const SETTINGS_STORAGE_KEY = "cueflow-teleprompter:settings";
+const SCRIPT_STORAGE_KEY = "cueflow-teleprompter:script";
+const WS_URL_STORAGE_KEY = "cueflow-teleprompter:ws-url";
+const DISPLAY_CHANNEL_NAME = "cueflow-teleprompter-display-sync";
 const SENTENCE_BOUNDARY = /[。！？；!?;,，\n]/;
 
 type DisplaySyncPayload = {

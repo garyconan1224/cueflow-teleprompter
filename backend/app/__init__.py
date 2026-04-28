@@ -1,1 +1,1 @@
-"""Backend application package for the voice teleprompter project."""
+"""Backend application package for the CueFlow Teleprompter project."""

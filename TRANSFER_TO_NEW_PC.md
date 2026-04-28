@@ -1,4 +1,4 @@
-# 转移到新电脑后的执行顺序
+# CueFlow Teleprompter 新电脑执行顺序
 
 这份文档是给“把当前项目搬到另一台 Windows 电脑后怎么跑起来”准备的。
 
@@ -21,8 +21,8 @@
 
 执行后会生成两样东西：
 
-- `release/voice_teleprompter_portable/`
-- `release/voice_teleprompter_portable.zip`
+- `release/cueflow-teleprompter-portable/`
+- `release/cueflow-teleprompter-portable.zip`
 
 推荐直接把 `zip` 复制到新电脑，再解压。
 
@@ -37,7 +37,7 @@
 ### 可选但强烈建议有
 
 1. NVIDIA 显卡
-2. 已安装可用的 CUDA 环境
+2. 可用的 CUDA 环境
 
 如果没有 GPU，程序通常也能跑，但识别速度会慢很多。
 
@@ -47,13 +47,13 @@
 
 把下面任一内容放到新电脑的某个目录中：
 
-- `voice_teleprompter_portable.zip` 解压后的目录
-- 或 `voice_teleprompter_portable` 整个文件夹
+- `cueflow-teleprompter-portable.zip` 解压后的目录
+- 或 `cueflow-teleprompter-portable` 整个文件夹
 
 建议路径尽量简单，例如：
 
 ```text
-D:\voice_teleprompter_portable
+D:\cueflow-teleprompter-portable
 ```
 
 ### 第 2 步：安装运行环境
@@ -98,7 +98,7 @@ http://127.0.0.1:8000
 
 ## 第一次启动建议检查什么
 
-### 1. 先看服务是否正常
+### 先看服务是否正常
 
 浏览器打开：
 
@@ -108,7 +108,7 @@ http://127.0.0.1:8000/health
 
 如果返回 `{"status":"ok"}`，说明后端已正常运行。
 
-### 2. 再测麦克风
+### 再测麦克风
 
 如果你怀疑新电脑麦克风权限或设备有问题，可以先运行：
 
@@ -125,7 +125,7 @@ python phase1_asr_test.py
 
 ## 常见情况
 
-### 情况 1：双击 `setup_portable_env.bat` 后提示找不到 `python`
+### 双击 `setup_portable_env.bat` 后提示找不到 `python`
 
 说明新电脑没有装 Python，或者 Python 没有加入环境变量。
 
@@ -135,7 +135,7 @@ python phase1_asr_test.py
 2. 安装时勾选 `Add Python to PATH`
 3. 重新运行 `setup_portable_env.bat`
 
-### 情况 2：能启动，但识别很慢
+### 能启动，但识别很慢
 
 通常是以下原因之一：
 
@@ -145,7 +145,7 @@ python phase1_asr_test.py
 
 可以先看启动日志里是否使用了 `cuda:0`。
 
-### 情况 3：页面能打开，但开始识别没反应
+### 页面能打开，但开始识别没反应
 
 优先检查：
 
@@ -153,7 +153,7 @@ python phase1_asr_test.py
 2. 系统默认输入设备是否正确
 3. 是否有别的软件占用了麦克风
 
-### 情况 4：模型缓存没有带过去
+### 模型缓存没有带过去
 
 正常打包会尽量复制 `.modelscope_cache`。如果因为某些原因没有带过去，可以在新电脑上运行：
 
@@ -181,4 +181,4 @@ python phase1_asr_test.py
 1. 新电脑有 Python
 2. 首次执行时安装 Python 依赖
 
-如果后面我们要继续收口，还可以再做一版真正的“一键绿色版”封装。
+如果后面我们要继续收口，还可以再做一版真正的一键绿色版封装。

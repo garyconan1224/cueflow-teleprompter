@@ -1,8 +1,8 @@
-# Voice Teleprompter
+# CueFlow Teleprompter
 
-这是一个本地运行的中文语音提词器。
+`CueFlow Teleprompter` 是一个本地运行的中文语音提词器。
 
-浏览器负责编辑脚本、采集麦克风和显示提词器；后端负责流式语音识别、游标追踪，并通过 WebSocket 把当前位置实时推回前端，让提词内容跟着你的朗读往上滑动。
+浏览器负责编辑脚本、采集麦克风和显示提词器；后端负责流式语音识别、游标追踪，并通过 WebSocket 把当前位置实时推回前端，让提词内容跟着朗读自动上滑。
 
 ## 当前已完成
 
@@ -11,7 +11,7 @@
 - `Phase 3` 浏览器采音到后端识别的完整链路
 - `Phase 4` 语音驱动的游标追踪、自动上滑、单双屏、全屏
 - 使用增强：直接粘贴文本、导入脚本文件、鼠标滚轮微调位置、当前位置轻量高亮、状态提示、错误提示
-- 工程增强：模型预下载脚本、后端测试、前端联调级自动化测试、可复制的便携打包脚本
+- 工程增强：模型预下载脚本、后端测试、前端联调级自动化测试、便携打包脚本
 
 ## 怎么添加提词文案
 
@@ -25,7 +25,7 @@
 
 ## 运行方式
 
-### 方式一：开发联调
+### 开发联调
 
 1. 启动后端
 
@@ -53,7 +53,7 @@ npm.cmd run dev
 
 - `http://localhost:5173`
 
-### 方式二：集成运行
+### 集成运行
 
 这个模式下不需要单独启动前端开发服务器，后端会直接托管 `frontend/dist` 里的构建产物。
 
@@ -90,38 +90,33 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 
 ## 常用测试
 
-### 1. 麦克风单点测试
+### 麦克风单点测试
 
 ```powershell
 python phase1_asr_test.py
-```
-
-列出设备：
-
-```powershell
 python phase1_asr_test.py --list-devices
 ```
 
-### 2. WebSocket 示例音频测试
+### WebSocket 示例音频测试
 
 ```powershell
 python backend/scripts/test_client.py --realtime
 ```
 
-### 3. 预下载模型
+### 预下载模型
 
 ```powershell
 python backend/scripts/download_models.py
 ```
 
-### 4. 后端测试
+### 后端测试
 
 ```powershell
 python -m unittest tests.test_matcher tests.test_websocket
 python -m compileall backend tests
 ```
 
-### 5. 前端构建和联调测试
+### 前端构建和联调测试
 
 ```powershell
 cd frontend
@@ -131,34 +126,27 @@ npm.cmd run build
 npm.cmd run test:e2e
 ```
 
-## 打包为可复制版本
+## 便携打包
 
 如果你想把项目复制到别的目录，或者复制到另一台 Windows 机器继续使用，可以执行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\package_portable.ps1
+& .\package_portable.ps1
 ```
 
-脚本会在 `release/voice_teleprompter_portable` 下生成一份便携目录，里面包含：
+脚本会生成：
+
+- `release/cueflow-teleprompter-portable/`
+- `release/cueflow-teleprompter-portable.zip`
+
+便携包里包含：
 
 - 后端代码
 - 构建好的前端页面
 - 模型缓存（如果当前目录里已有 `.modelscope_cache`）
 - 启动脚本
 - 安装依赖脚本
-
-复制后使用步骤：
-
-1. 进入打包目录。
-2. 运行一次 `setup_portable_env.bat`。
-3. 运行 `run_portable_app.bat`。
-4. 打开 `http://127.0.0.1:8000`。
-
-说明：
-
-- 这个“便携包”已经不再依赖 Node.js。
-- 目标机器仍然需要可用的 Python 环境，首次使用要安装 `requirements.txt` 里的依赖。
-- 如果目标机器 GPU、CUDA 或音频设备环境不同，识别性能会随之变化。
+- 新电脑迁移说明文档
 
 ## 目录说明
 

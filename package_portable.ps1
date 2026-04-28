@@ -2,8 +2,9 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $releaseRoot = Join-Path $projectRoot "release"
-$bundleRoot = Join-Path $releaseRoot "voice_teleprompter_portable"
-$zipPath = Join-Path $releaseRoot "voice_teleprompter_portable.zip"
+$bundleName = "cueflow-teleprompter-portable"
+$bundleRoot = Join-Path $releaseRoot $bundleName
+$zipPath = Join-Path $releaseRoot "$bundleName.zip"
 
 Write-Host "[1/4] Build frontend..."
 Push-Location (Join-Path $projectRoot "frontend")

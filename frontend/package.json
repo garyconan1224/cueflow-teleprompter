@@ -1,5 +1,5 @@
 {
-  "name": "voice-teleprompter-frontend",
+  "name": "cueflow-teleprompter-frontend",
   "private": true,
   "version": "0.2.0",
   "type": "module",
