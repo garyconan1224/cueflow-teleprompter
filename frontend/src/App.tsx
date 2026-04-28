@@ -295,6 +295,17 @@ export default function App() {
     setIsPlaying(false);
   }
 
+  async function importScriptFile(file: File) {
+    const text = await file.text();
+    setScript(text);
+    setCursor(0);
+    setIsPlaying(false);
+
+    if (ws.connectionState === "connected") {
+      ws.sendControl({ type: "start", script: text });
+    }
+  }
+
   async function handleConnect() {
     await ws.connect(wsUrl, script);
   }
@@ -388,6 +399,7 @@ export default function App() {
           script={script}
           onChange={setScript}
           onResetSample={resetSample}
+          onImportFile={importScriptFile}
         />
         <ConnectionPanel
           wsUrl={wsUrl}
@@ -399,6 +411,7 @@ export default function App() {
           cursorPosition={ws.cursorPosition}
           matchScore={ws.matchScore}
           matchedText={ws.matchedText}
+          isCursorLost={ws.isCursorLost}
           error={audioCapture.error ?? ws.lastError}
           onWsUrlChange={setWsUrl}
           onConnect={() => {

@@ -14,6 +14,7 @@ type HookState = {
   cursorPosition: number | null;
   matchScore: number | null;
   matchedText: string;
+  isCursorLost: boolean;
   lastLatencyMs: number | null;
   lastError: string | null;
 };
@@ -25,6 +26,7 @@ const initialState: HookState = {
   cursorPosition: null,
   matchScore: null,
   matchedText: "",
+  isCursorLost: false,
   lastLatencyMs: null,
   lastError: null
 };
@@ -109,7 +111,8 @@ export function useTeleprompterWS() {
               cursorPosition: payload.position,
               matchScore:
                 payload.score !== undefined ? payload.score : current.matchScore,
-              matchedText: payload.matched ?? current.matchedText
+              matchedText: payload.matched ?? current.matchedText,
+              isCursorLost: payload.lost ?? false
             }));
             return;
           }
@@ -160,6 +163,7 @@ export function useTeleprompterWS() {
       transcript: "",
       matchedText: "",
       matchScore: null,
+      isCursorLost: false,
       lastLatencyMs: null,
       lastError: null
     }));

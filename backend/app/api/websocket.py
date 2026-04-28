@@ -111,7 +111,9 @@ async def _handle_control_message(
         tracking_session.start(script)
         runtime.started = True
         await websocket.send_json({"type": "status", "state": "listening"})
-        await _safe_send_json(websocket, _cursor_payload(tracking_session.cursor, 0, ""))
+        await _safe_send_json(
+            websocket, _cursor_payload(tracking_session.cursor, 0, "", lost=False)
+        )
         return
 
     if message_type == "stop":
@@ -134,13 +136,15 @@ async def _handle_control_message(
         tracking_session.stop()
         runtime.started = False
         await websocket.send_json({"type": "status", "state": "ready"})
-        await _safe_send_json(websocket, _cursor_payload(tracking_session.cursor, 0, ""))
+        await _safe_send_json(
+            websocket, _cursor_payload(tracking_session.cursor, 0, "", lost=False)
+        )
         return
 
     if message_type == "seek":
         seek_position = int(message.get("cursor", 0))
         new_cursor = tracking_session.seek(seek_position)
-        await _safe_send_json(websocket, _cursor_payload(new_cursor, 0, ""))
+        await _safe_send_json(websocket, _cursor_payload(new_cursor, 0, "", lost=False))
         return
 
     await websocket.send_json(
@@ -182,6 +186,7 @@ async def _handle_audio_bytes(
                         cursor_result.position,
                         cursor_result.score,
                         cursor_result.matched,
+                        lost=tracking_session.is_cursor_lost,
                     ),
                 )
 
@@ -218,18 +223,22 @@ async def _flush_tail_audio(
                         cursor_result.position,
                         cursor_result.score,
                         cursor_result.matched,
+                        lost=tracking_session.is_cursor_lost,
                     ),
                 )
 
     await _safe_send_json(websocket, {"type": "status", "state": "stopped"})
 
 
-def _cursor_payload(position: int, score: float, matched: str) -> dict[str, Any]:
+def _cursor_payload(
+    position: int, score: float, matched: str, *, lost: bool
+) -> dict[str, Any]:
     return {
         "type": "cursor",
         "position": position,
         "score": round(score, 1),
         "matched": matched,
+        "lost": lost,
     }
 
 

@@ -14,6 +14,7 @@ export type ServerMessage =
       position: number;
       score?: number;
       matched?: string;
+      lost?: boolean;
     }
   | {
       type: "transcript";

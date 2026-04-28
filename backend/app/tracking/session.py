@@ -72,9 +72,15 @@ class TrackingSession:
             self._shrink_after_success()
         return result
 
+    @property
+    def is_cursor_lost(self) -> bool:
+        return self.fail_count >= config.FAIL_BEFORE_EXPAND
+
     def _append_chunk(self, text: str, *, now: float, is_final: bool) -> None:
         if not self.recent_chunks:
-            self.recent_chunks.append(TranscriptChunk(text=text, timestamp=now, is_final=is_final))
+            self.recent_chunks.append(
+                TranscriptChunk(text=text, timestamp=now, is_final=is_final)
+            )
             return
 
         last = self.recent_chunks[-1]

@@ -11,6 +11,7 @@ type ConnectionPanelProps = {
   cursorPosition: number | null;
   matchScore: number | null;
   matchedText: string;
+  isCursorLost: boolean;
   error: string | null;
   onWsUrlChange: (value: string) => void;
   onConnect: () => void;
@@ -47,6 +48,7 @@ export function ConnectionPanel({
   cursorPosition,
   matchScore,
   matchedText,
+  isCursorLost,
   error,
   onWsUrlChange,
   onConnect,
@@ -113,6 +115,10 @@ export function ConnectionPanel({
         <span>实时游标: {cursorPosition ?? 0}</span>
         <span>匹配分数: {matchScore !== null ? matchScore.toFixed(1) : "暂无"}</span>
       </div>
+
+      {isCursorLost ? (
+        <p className="warning-text">跟读位置暂时丢失，可以拖动当前位置重新对齐。</p>
+      ) : null}
 
       <div className="transcript-box">
         {transcript || "这里会显示后端返回的实时识别文本。"}

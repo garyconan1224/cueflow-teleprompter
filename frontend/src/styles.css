@@ -194,6 +194,10 @@ h2 {
   margin-top: 10px;
 }
 
+.button-row--tight {
+  margin-top: 0;
+}
+
 .choice-row {
   display: flex;
   flex-wrap: wrap;
@@ -321,6 +325,12 @@ h2 {
 .error-text {
   margin: 12px 0 0;
   color: #9e321f;
+  font-size: 13px;
+}
+
+.warning-text {
+  margin: 12px 0 0;
+  color: #8a5809;
   font-size: 13px;
 }
 
