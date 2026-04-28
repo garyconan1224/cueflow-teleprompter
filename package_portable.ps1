@@ -39,6 +39,11 @@ if (Test-Path $modelCache) {
   Copy-Item -LiteralPath $modelCache -Destination $bundleRoot -Recurse
 }
 
+Get-ChildItem -Path $bundleRoot -Recurse -Directory -Filter "__pycache__" |
+  Remove-Item -Recurse -Force
+Get-ChildItem -Path $bundleRoot -Recurse -File -Include "*.pyc","*.pyo" |
+  Remove-Item -Force
+
 Write-Host "[4/4] Create zip archive..."
 if (Test-Path $zipPath) {
   Remove-Item -LiteralPath $zipPath -Force
