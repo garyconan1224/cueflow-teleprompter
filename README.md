@@ -171,6 +171,21 @@ npm.cmd run test:e2e
 - `LICENSE`
 - 新电脑迁移说明文档
 
+## 完整独立包
+
+`standalone-runtime` 分支额外提供完整独立打包脚本：
+
+```powershell
+& .\package_standalone.ps1
+```
+
+它会生成：
+
+- `release/cueflow-teleprompter-standalone/`
+- `release/cueflow-teleprompter-standalone.zip`
+
+这个包会自带 Python 和依赖。新电脑不需要预先安装 Python 或 Node.js，解压后双击 `start_cueflow.bat` 即可启动。
+
 ## 目录说明
 
 - [backend/app/main.py](backend/app/main.py): FastAPI 入口，也负责托管构建后的前端页面
