@@ -16,6 +16,34 @@ if not errorlevel 1 (
   )
 )
 
+if defined PYTHON_BOOTSTRAP (
+  call "%PYTHON_BOOTSTRAP%" %PYTHON_BOOTSTRAP_ARGS% --version >nul 2>nul
+  if errorlevel 1 (
+    set "PYTHON_BOOTSTRAP="
+    set "PYTHON_BOOTSTRAP_ARGS="
+  )
+)
+if not defined PYTHON_BOOTSTRAP (
+  where python >nul 2>nul
+  if not errorlevel 1 (
+    set "PYTHON_BOOTSTRAP=python"
+    set "PYTHON_BOOTSTRAP_ARGS="
+    call python --version >nul 2>nul
+    if errorlevel 1 (
+      set "PYTHON_BOOTSTRAP="
+    )
+  )
+)
+
+if exist ".venv\Scripts\python.exe" (
+  call ".venv\Scripts\python.exe" --version >nul 2>nul
+  if errorlevel 1 (
+    echo [Setup] Existing .venv is broken or was moved from another computer.
+    echo [Setup] Recreate virtual environment...
+    rmdir /s /q ".venv"
+  )
+)
+
 if not exist ".venv\Scripts\python.exe" (
   if not defined PYTHON_BOOTSTRAP (
     echo [Error] Python was not found.
@@ -44,7 +72,7 @@ if errorlevel 1 (
 )
 
 echo [Setup] Install Python dependencies...
-call ".venv\Scripts\pip.exe" install -r requirements.txt
+call ".venv\Scripts\python.exe" -m pip install -r requirements.txt
 if errorlevel 1 (
   echo.
   echo [Error] Failed to install Python dependencies.

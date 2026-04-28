@@ -68,7 +68,7 @@ D:\cueflow-teleprompter-portable
 
 这个脚本会自动做几件事：
 
-1. 创建 `.venv`
+1. 检查 `.venv` 是否可用，如果是从旧电脑或旧路径搬来的坏环境，会自动重建
 2. 升级 `pip`
 3. 安装 `requirements.txt` 里的依赖
 

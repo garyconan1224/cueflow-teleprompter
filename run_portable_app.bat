@@ -6,6 +6,13 @@ cd /d "%SCRIPT_DIR%"
 set "PYTHON_CMD="
 set "PYTHON_ARGS="
 if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+  call "%SCRIPT_DIR%.venv\Scripts\python.exe" --version >nul 2>nul
+  if errorlevel 1 (
+    echo [Error] The local .venv is broken or was moved from another computer.
+    echo Please run setup_portable_env.bat once to rebuild it.
+    pause
+    exit /b 1
+  )
   set "PYTHON_CMD=%SCRIPT_DIR%.venv\Scripts\python.exe"
 ) else (
   where py >nul 2>nul
@@ -16,6 +23,25 @@ if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     where python >nul 2>nul
     if not errorlevel 1 (
       set "PYTHON_CMD=python"
+    )
+  )
+)
+
+if defined PYTHON_CMD (
+  call "%PYTHON_CMD%" %PYTHON_ARGS% --version >nul 2>nul
+  if errorlevel 1 (
+    set "PYTHON_CMD="
+    set "PYTHON_ARGS="
+  )
+)
+if not defined PYTHON_CMD (
+  where python >nul 2>nul
+  if not errorlevel 1 (
+    set "PYTHON_CMD=python"
+    set "PYTHON_ARGS="
+    call python --version >nul 2>nul
+    if errorlevel 1 (
+      set "PYTHON_CMD="
     )
   )
 )
