@@ -1,8 +1,10 @@
 .modelscope_cache/
+.venv/
 __pycache__/
 *.log
 frontend/node_modules/
 frontend/dist/
+frontend/test-results/
 frontend/.npm-cache/
 frontend/*.tsbuildinfo
 frontend/vite.config.js

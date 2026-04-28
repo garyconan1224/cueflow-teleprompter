@@ -37,7 +37,7 @@ export function useAudioCapture() {
         }
       });
 
-      const audioContext = new AudioContext();
+      const audioContext = createSpeechAudioContext();
       await audioContext.audioWorklet.addModule("/recorder-worklet.js");
 
       const sourceNode = audioContext.createMediaStreamSource(mediaStream);
@@ -93,4 +93,12 @@ export function useAudioCapture() {
     start,
     stop
   };
+}
+
+function createSpeechAudioContext() {
+  try {
+    return new AudioContext({ sampleRate: 16000 });
+  } catch {
+    return new AudioContext();
+  }
 }

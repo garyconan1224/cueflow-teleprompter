@@ -67,3 +67,39 @@ class MatcherTests(unittest.TestCase):
         )
         self.assertTrue(result.updated)
         self.assertGreater(result.position, boundary)
+
+    def test_short_partial_fragment_can_advance_cursor(self) -> None:
+        script = "现在进入示例朗读。欢迎大家来体验达摩院推出的语音识别模型。"
+        result = update_cursor(
+            script=script,
+            cursor=0,
+            recent_text="欢迎大",
+            fail_count=0,
+            is_final=False,
+        )
+        self.assertTrue(result.updated)
+        self.assertGreater(result.position, 0)
+
+    def test_soft_partial_match_can_advance_conservatively(self) -> None:
+        script = "欢迎大家来体验达摩院推出的语音识别模型。"
+        result = update_cursor(
+            script=script,
+            cursor=0,
+            recent_text="欢迎大家体验达摩院推出语音识别",
+            fail_count=0,
+            is_final=False,
+        )
+        self.assertTrue(result.updated)
+        self.assertLessEqual(result.position, 24)
+
+    def test_pinyin_fallback_handles_homophone_errors(self) -> None:
+        script = "欢迎大家来体验达摩院推出的语音识别模型。"
+        result = update_cursor(
+            script=script,
+            cursor=0,
+            recent_text="欢迎大家来体验达魔院推出的语音识别",
+            fail_count=0,
+            is_final=False,
+        )
+        self.assertTrue(result.updated)
+        self.assertGreater(result.position, 10)

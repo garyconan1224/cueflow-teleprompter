@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from backend.app import config
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class ConnectionRuntimeState:
     started: bool = False
+    received_audio: bool = False
 
 
 def create_websocket_router(engine: StreamingASREngine) -> APIRouter:
@@ -168,6 +170,7 @@ async def _handle_audio_bytes(
 
     frames = audio_buffer.push(audio_bytes)
     for frame in frames:
+        runtime.received_audio = True
         result = await engine.transcribe_chunk(asr_session, frame, is_final=False)
         if result.text:
             await websocket.send_json(
@@ -203,7 +206,11 @@ async def _flush_tail_audio(
     if not runtime.started:
         return
 
-    for frame in audio_buffer.flush():
+    frames = audio_buffer.flush()
+    if not frames and runtime.received_audio:
+        frames = [np.zeros(config.ASR_CHUNK_SAMPLES, dtype=np.float32)]
+
+    for frame in frames:
         result = await engine.transcribe_chunk(asr_session, frame, is_final=True)
         if result.text:
             await _safe_send_json(
