@@ -129,6 +129,10 @@ h2 {
 .script-input {
   min-height: 260px;
   resize: vertical;
+}
+
+.script-input,
+.text-input {
   border: 1px solid rgba(91, 58, 26, 0.16);
   border-radius: 18px;
   padding: 14px 16px;
@@ -137,7 +141,12 @@ h2 {
   line-height: 1.7;
 }
 
+.text-input {
+  width: 100%;
+}
+
 .script-input:focus,
+.text-input:focus,
 .slider:focus,
 .primary-button:focus,
 .ghost-button:focus {
@@ -191,6 +200,37 @@ h2 {
   gap: 10px;
   margin-top: 16px;
   font-size: 14px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(184, 111, 41, 0.12);
+  color: #7d4b1d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.transcript-box {
+  margin-top: 14px;
+  min-height: 110px;
+  border: 1px solid rgba(91, 58, 26, 0.12);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #2f2011;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.error-text {
+  margin: 12px 0 0;
+  color: #9e321f;
+  font-size: 13px;
 }
 
 .teleprompter {

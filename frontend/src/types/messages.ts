@@ -4,6 +4,8 @@ export type ClientControlMessage =
   | { type: "reset" }
   | { type: "seek"; cursor: number };
 
+export type BackendState = "ready" | "listening" | "stopped";
+
 export type ServerMessage =
   | {
       type: "cursor";
@@ -15,10 +17,11 @@ export type ServerMessage =
       type: "transcript";
       text: string;
       is_final: boolean;
+      latency_ms?: number;
     }
   | {
       type: "status";
-      state: "ready" | "listening" | "stopped";
+      state: BackendState;
     }
   | {
       type: "error";

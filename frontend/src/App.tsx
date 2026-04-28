@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { ConnectionPanel } from "./components/ConnectionPanel";
 import { ControlPanel } from "./components/ControlPanel";
 import { ScriptEditor } from "./components/ScriptEditor";
 import { Teleprompter } from "./components/Teleprompter";
+import { useAudioCapture } from "./hooks/useAudioCapture";
+import { useTeleprompterWS } from "./hooks/useTeleprompterWS";
 import type { TeleprompterSettings } from "./types/messages";
 import { sampleScript } from "./utils/sampleScript";
 
 const SETTINGS_STORAGE_KEY = "voice-teleprompter:settings";
 const SCRIPT_STORAGE_KEY = "voice-teleprompter:script";
+const WS_URL_STORAGE_KEY = "voice-teleprompter:ws-url";
 
 const defaultSettings: TeleprompterSettings = {
   fontSize: 42,
@@ -37,11 +41,21 @@ function loadScript() {
   return window.localStorage.getItem(SCRIPT_STORAGE_KEY) ?? sampleScript;
 }
 
+function loadWsUrl() {
+  return (
+    window.localStorage.getItem(WS_URL_STORAGE_KEY) ??
+    "ws://127.0.0.1:8000/ws/teleprompter"
+  );
+}
+
 export default function App() {
   const [script, setScript] = useState(loadScript);
   const [settings, setSettings] = useState(loadSettings);
   const [cursor, setCursor] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [wsUrl, setWsUrl] = useState(loadWsUrl);
+  const ws = useTeleprompterWS();
+  const audioCapture = useAudioCapture();
 
   useEffect(() => {
     window.localStorage.setItem(SCRIPT_STORAGE_KEY, script);
@@ -53,6 +67,16 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    window.localStorage.setItem(WS_URL_STORAGE_KEY, wsUrl);
+  }, [wsUrl]);
+
+  useEffect(() => {
+    if (ws.connectionState === "idle" && audioCapture.isCapturing) {
+      void audioCapture.stop();
+    }
+  }, [audioCapture, ws.connectionState, audioCapture.isCapturing]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -92,6 +116,27 @@ export default function App() {
     setIsPlaying(false);
   }
 
+  async function handleConnect() {
+    await ws.connect(wsUrl, script);
+  }
+
+  async function handleStartMic() {
+    if (ws.connectionState !== "connected") {
+      await ws.connect(wsUrl, script);
+    } else {
+      ws.sendControl({ type: "start", script });
+    }
+
+    await audioCapture.start((frame) => {
+      ws.sendAudioFrame(frame);
+    });
+  }
+
+  async function handleStopMic() {
+    await audioCapture.stop();
+    ws.sendControl({ type: "stop" });
+  }
+
   return (
     <div className="app-shell">
       <aside className="workspace">
@@ -104,6 +149,31 @@ export default function App() {
           script={script}
           onChange={setScript}
           onResetSample={resetSample}
+        />
+        <ConnectionPanel
+          wsUrl={wsUrl}
+          wsConnectionState={ws.connectionState}
+          backendState={ws.backendState}
+          isCapturing={audioCapture.isCapturing}
+          transcript={ws.transcript}
+          latencyMs={ws.lastLatencyMs}
+          error={audioCapture.error ?? ws.lastError}
+          onWsUrlChange={setWsUrl}
+          onConnect={() => {
+            void handleConnect();
+          }}
+          onDisconnect={() => {
+            void audioCapture.stop();
+            ws.disconnect();
+          }}
+          onSyncScript={() => ws.sendControl({ type: "start", script })}
+          onStartMic={() => {
+            void handleStartMic();
+          }}
+          onStopMic={() => {
+            void handleStopMic();
+          }}
+          onClearTranscript={ws.clearTranscript}
         />
         <ControlPanel
           cursor={cursor}

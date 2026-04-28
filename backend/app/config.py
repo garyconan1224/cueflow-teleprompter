@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import torch
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+MODEL_CACHE_DIR = BASE_DIR / ".modelscope_cache"
+LOCAL_STREAMING_MODEL_DIR = (
+    MODEL_CACHE_DIR
+    / "models"
+    / "iic"
+    / "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
+)
+DEFAULT_STREAMING_MODEL_ID = "paraformer-zh-streaming"
+
+WS_PATH = "/ws/teleprompter"
+
+SAMPLE_RATE = 16000
+CHANNELS = 1
+BYTES_PER_SAMPLE = 2
+AUDIO_FRAME_MS = 200
+PCM_FRAME_SAMPLES = SAMPLE_RATE * AUDIO_FRAME_MS // 1000
+PCM_FRAME_BYTES = PCM_FRAME_SAMPLES * BYTES_PER_SAMPLE
+
+STREAM_CHUNK_SIZE = [0, 10, 5]
+ENCODER_CHUNK_LOOK_BACK = 4
+DECODER_CHUNK_LOOK_BACK = 1
+ASR_CHUNK_SAMPLES = STREAM_CHUNK_SIZE[1] * 960
+ASR_CHUNK_BYTES = ASR_CHUNK_SAMPLES * BYTES_PER_SAMPLE
+
+LOG_TRANSCRIPT_TEXT = True
+DEFAULT_DEVICE = os.getenv(
+    "TELEPROMPTER_DEVICE", "cuda:0" if torch.cuda.is_available() else "cpu"
+)
+
+
+def resolve_model_source() -> str:
+    """
+    优先使用本地已缓存模型，避免服务启动时再次联网下载。
+    如果本地模型不存在，再回退到 FunASR 模型 ID。
+    """
+    if LOCAL_STREAMING_MODEL_DIR.exists():
+        return str(LOCAL_STREAMING_MODEL_DIR)
+    return DEFAULT_STREAMING_MODEL_ID
