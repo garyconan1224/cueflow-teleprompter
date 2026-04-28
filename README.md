@@ -1,27 +1,71 @@
 # Voice Teleprompter
 
-本项目是一个本地运行的中文语音提词器：浏览器采集麦克风音频，后端用 FunASR 做流式识别，再把游标位置通过 WebSocket 推回前端，让提词脚本自动上滑。
+这是一个本地运行的中文语音提词器。
 
-## 现在已经完成的范围
+浏览器负责编辑脚本、采集麦克风和显示提词器；后端负责流式语音识别、游标追踪，并通过 WebSocket 把当前位置实时推回前端，让提词内容跟着你的朗读往上滑动。
 
-- Phase 1：本地麦克风 ASR 单点验证
-- Phase 2：FastAPI WebSocket ASR 服务
-- Phase 3：浏览器采音到后端识别的完整链路
-- Phase 4：语音驱动的游标追踪、平滑滚动、单双屏、全屏、主题调节
-- 补充收尾：脚本文件导入、位置丢失提示、模型预下载脚本、WebSocket 端到端测试
+## 当前已完成
 
-## 怎么添加文本文案
+- `Phase 1` 本地麦克风 ASR 单点验证
+- `Phase 2` FastAPI WebSocket 识别服务
+- `Phase 3` 浏览器采音到后端识别的完整链路
+- `Phase 4` 语音驱动的游标追踪、自动上滑、单双屏、全屏
+- 使用增强：直接粘贴文本、导入脚本文件、鼠标滚轮微调位置、当前位置轻量高亮、状态提示、错误提示
+- 工程增强：模型预下载脚本、后端测试、前端联调级自动化测试、可复制的便携打包脚本
 
-有两种方式：
+## 怎么添加提词文案
 
-1. 打开前端页面，在左侧“脚本编辑”里直接粘贴演讲稿。
-2. 点击“导入文件”，选择 `.txt`、`.md` 或 `.srt` 文件，脚本会自动载入到编辑区。
+有三种方式：
 
-如果后端已经连接，导入新脚本后会自动把新文本同步给后端。
+1. 打开页面后，直接在左侧“脚本编辑”里输入或粘贴文本。
+2. 点击“粘贴文本”，直接读取系统剪贴板。
+3. 点击“导入文件”，选择 `.txt`、`.md` 或 `.srt` 文件。
 
-## 快速启动
+如果后端已经连接，新脚本会自动同步给识别链路。
 
-### 后端
+## 运行方式
+
+### 方式一：开发联调
+
+1. 启动后端
+
+```powershell
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+也可以直接双击：
+
+- `run_backend_server.bat`
+
+2. 启动前端开发服务器
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+也可以直接双击：
+
+- `run_frontend_dev.bat`
+
+3. 打开浏览器
+
+- `http://localhost:5173`
+
+### 方式二：集成运行
+
+这个模式下不需要单独启动前端开发服务器，后端会直接托管 `frontend/dist` 里的构建产物。
+
+1. 先构建前端
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run build
+```
+
+2. 回到项目根目录启动
 
 ```powershell
 python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
@@ -29,22 +73,20 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 
 或者直接双击：
 
-- `run_backend_server.bat`
+- `run_portable_app.bat`
 
-### 前端
+3. 打开浏览器
 
-```powershell
-cd frontend
-npm.cmd run dev
-```
+- `http://127.0.0.1:8000`
 
-或者直接双击：
+## 页面操作说明
 
-- `run_frontend_dev.bat`
-
-页面地址：
-
-- `http://localhost:5173`
+1. 在左侧粘贴或导入脚本。
+2. 点击“连接后端”。
+3. 点击“开始麦克风识别”。
+4. 提词内容会根据语音识别结果自动向上滑动，并尽量把当前朗读位置停在虚线附近。
+5. 你可以直接用鼠标滚轮微调当前位置，按住 `Shift` 时会更快跳动。
+6. 如果位置丢失，可以拖动“当前位置”滑块，或者在提词器里滚轮回调重新对齐。
 
 ## 常用测试
 
@@ -66,31 +108,66 @@ python phase1_asr_test.py --list-devices
 python backend/scripts/test_client.py --realtime
 ```
 
-### 3. 模型预下载
+### 3. 预下载模型
 
 ```powershell
 python backend/scripts/download_models.py
 ```
 
-### 4. 自动化测试
+### 4. 后端测试
 
 ```powershell
 python -m unittest tests.test_matcher tests.test_websocket
+python -m compileall backend tests
 ```
+
+### 5. 前端构建和联调测试
+
+```powershell
+cd frontend
+npm.cmd install
+npx playwright install chromium
+npm.cmd run build
+npm.cmd run test:e2e
+```
+
+## 打包为可复制版本
+
+如果你想把项目复制到别的目录，或者复制到另一台 Windows 机器继续使用，可以执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\package_portable.ps1
+```
+
+脚本会在 `release/voice_teleprompter_portable` 下生成一份便携目录，里面包含：
+
+- 后端代码
+- 构建好的前端页面
+- 模型缓存（如果当前目录里已有 `.modelscope_cache`）
+- 启动脚本
+- 安装依赖脚本
+
+复制后使用步骤：
+
+1. 进入打包目录。
+2. 运行一次 `setup_portable_env.bat`。
+3. 运行 `run_portable_app.bat`。
+4. 打开 `http://127.0.0.1:8000`。
+
+说明：
+
+- 这个“便携包”已经不再依赖 Node.js。
+- 目标机器仍然需要可用的 Python 环境，首次使用要安装 `requirements.txt` 里的依赖。
+- 如果目标机器 GPU、CUDA 或音频设备环境不同，识别性能会随之变化。
 
 ## 目录说明
 
-- [backend/app/main.py](backend/app/main.py)：FastAPI 入口
-- [backend/app/api/websocket.py](backend/app/api/websocket.py)：WebSocket 协议与消息处理
-- [backend/app/asr/engine.py](backend/app/asr/engine.py)：FunASR 封装
-- [backend/app/tracking/matcher.py](backend/app/tracking/matcher.py)：游标模糊匹配
-- [frontend/src/components/Teleprompter.tsx](frontend/src/components/Teleprompter.tsx)：提词器显示与滚动
-- [frontend/src/components/ScriptEditor.tsx](frontend/src/components/ScriptEditor.tsx)：脚本编辑与文件导入
-
-## 当前使用说明
-
-1. 在前端导入或粘贴脚本。
-2. 点击“连接后端”。
-3. 点击“开始麦克风识别”。
-4. 朗读时，文本会根据识别游标自动向上滑动。
-5. 如果出现“跟读位置暂时丢失”，可以拖动当前位置重新对齐，再继续朗读。
+- [backend/app/main.py](backend/app/main.py): FastAPI 入口，也负责托管构建后的前端页面
+- [backend/app/api/websocket.py](backend/app/api/websocket.py): WebSocket 消息协议和识别链路
+- [backend/app/asr/engine.py](backend/app/asr/engine.py): FunASR 封装
+- [backend/app/tracking/matcher.py](backend/app/tracking/matcher.py): 游标模糊匹配和推进逻辑
+- [backend/app/tracking/session.py](backend/app/tracking/session.py): 跟读会话状态
+- [frontend/src/App.tsx](frontend/src/App.tsx): 页面主状态、单双屏同步、联动控制
+- [frontend/src/components/ScriptEditor.tsx](frontend/src/components/ScriptEditor.tsx): 脚本编辑、粘贴、导入
+- [frontend/src/components/Teleprompter.tsx](frontend/src/components/Teleprompter.tsx): 提词显示、自动滑动、滚轮微调、全屏
+- [frontend/tests/teleprompter.spec.ts](frontend/tests/teleprompter.spec.ts): 前端联调级自动化测试

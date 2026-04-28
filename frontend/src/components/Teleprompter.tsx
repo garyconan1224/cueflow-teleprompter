@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, WheelEvent } from "react";
 import type { TeleprompterSettings } from "../types/messages";
 
 type TeleprompterProps = {
@@ -9,7 +9,29 @@ type TeleprompterProps = {
   title?: string;
   showFullscreenButton?: boolean;
   compactHeader?: boolean;
+  onCursorNudge?: (delta: number) => void;
 };
+
+const CURRENT_WINDOW_SIZE = 18;
+const SENTENCE_ENDINGS = /[。！？；!?;,，]/;
+
+function splitScriptWindow(script: string, cursor: number) {
+  const before = script.slice(0, cursor);
+  const upcoming = script.slice(cursor);
+  const sentenceBreakIndex = upcoming
+    .slice(0, CURRENT_WINDOW_SIZE + 12)
+    .search(SENTENCE_ENDINGS);
+  const currentLength =
+    sentenceBreakIndex >= 0
+      ? Math.max(1, Math.min(sentenceBreakIndex + 1, CURRENT_WINDOW_SIZE + 6))
+      : Math.min(CURRENT_WINDOW_SIZE, upcoming.length);
+
+  return {
+    before,
+    current: upcoming.slice(0, currentLength),
+    after: upcoming.slice(currentLength)
+  };
+}
 
 export function Teleprompter({
   script,
@@ -17,7 +39,8 @@ export function Teleprompter({
   settings,
   title = "智能提词器",
   showFullscreenButton = true,
-  compactHeader = false
+  compactHeader = false,
+  onCursorNudge
 }: TeleprompterProps) {
   const stageRef = useRef<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -27,8 +50,7 @@ export function Teleprompter({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const safeCursor = Math.max(0, Math.min(cursor, script.length));
-  const before = script.slice(0, safeCursor);
-  const after = script.slice(safeCursor);
+  const { before, current, after } = splitScriptWindow(script, safeCursor);
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -78,7 +100,10 @@ export function Teleprompter({
 
   const viewportStyle = useMemo<CSSProperties>(() => {
     if (isFullscreen || compactHeader) {
-      return { height: "calc(100vh - 140px)" };
+      return {
+        flex: 1,
+        minHeight: 0
+      };
     }
 
     return {
@@ -100,8 +125,23 @@ export function Teleprompter({
     await stage.requestFullscreen();
   }
 
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    if (!onCursorNudge || !script.length) {
+      return;
+    }
+
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? 1 : -1;
+    const step = event.shiftKey ? 24 : 8;
+    onCursorNudge(direction * step);
+  }
+
   return (
-    <section className="stage" ref={stageRef}>
+    <section
+      className="stage"
+      ref={stageRef}
+      data-testid={compactHeader ? "display-teleprompter" : "teleprompter-stage"}
+    >
       <div className="stage__header">
         <div>
           <p className="eyebrow">{compactHeader ? "Display" : "Preview"}</p>
@@ -109,7 +149,7 @@ export function Teleprompter({
         </div>
         <div className="stage__actions">
           <div className="stage__meta">
-            <span>进度 {progress.toFixed(1)}%</span>
+            <span data-testid="teleprompter-progress">进度 {progress.toFixed(1)}%</span>
             <span>
               游标 {safeCursor}/{script.length}
             </span>
@@ -122,7 +162,13 @@ export function Teleprompter({
         </div>
       </div>
 
-      <div className="teleprompter" ref={viewportRef} style={viewportStyle}>
+      <div
+        className="teleprompter"
+        ref={viewportRef}
+        style={viewportStyle}
+        onWheel={handleWheel}
+        data-testid="teleprompter-viewport"
+      >
         <div
           className="teleprompter__guide"
           style={{ top: `${settings.anchorRatio * 100}%` }}
@@ -132,7 +178,7 @@ export function Teleprompter({
           ref={contentRef}
           style={{
             transform: `translateY(-${translateY}px)`,
-            transitionDuration: `${Math.min(settings.transitionMs, 180)}ms`,
+            transitionDuration: `${Math.min(settings.transitionMs, 220)}ms`,
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
             maxWidth: `${settings.textWidth}%`,
@@ -156,10 +202,16 @@ export function Teleprompter({
                 {before}
               </span>
               <span className="teleprompter__anchor" ref={anchorRef} />
+              <span className="teleprompter__current">{current}</span>
               <span className="teleprompter__upcoming">{after}</span>
             </p>
           )}
         </div>
+      </div>
+
+      <div className="meta-row">
+        <span>鼠标滚轮可微调位置，按住 Shift 可大步调整。</span>
+        <span>自动跟读会尽量把当前朗读位置停在虚线附近。</span>
       </div>
 
       <div className="progress-bar" aria-hidden="true">

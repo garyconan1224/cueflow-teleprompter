@@ -315,6 +315,11 @@ export function ControlPanel({
             onChange={(value) => onSettingsChange("readTextColor", value)}
           />
           <ColorRow
+            label="当前文字颜色"
+            value={settings.currentTextColor}
+            onChange={(value) => onSettingsChange("currentTextColor", value)}
+          />
+          <ColorRow
             label="未读文字颜色"
             value={settings.upcomingTextColor}
             onChange={(value) => onSettingsChange("upcomingTextColor", value)}
@@ -323,6 +328,11 @@ export function ControlPanel({
             label="定位线颜色"
             value={settings.guideColor}
             onChange={(value) => onSettingsChange("guideColor", value)}
+          />
+          <ColorRow
+            label="当前高亮强调色"
+            value={settings.currentAccentColor}
+            onChange={(value) => onSettingsChange("currentAccentColor", value)}
           />
         </div>
       </div>

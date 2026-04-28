@@ -12,7 +12,11 @@ import { ScriptEditor } from "./components/ScriptEditor";
 import { Teleprompter } from "./components/Teleprompter";
 import { useAudioCapture } from "./hooks/useAudioCapture";
 import { useTeleprompterWS } from "./hooks/useTeleprompterWS";
-import type { ScreenMode, TeleprompterSettings } from "./types/messages";
+import type {
+  AppMode,
+  ScreenMode,
+  TeleprompterSettings
+} from "./types/messages";
 import { sampleScript } from "./utils/sampleScript";
 
 const SETTINGS_STORAGE_KEY = "voice-teleprompter:settings";
@@ -72,7 +76,7 @@ function migrateTransitionMs(rawValue: unknown) {
   if (typeof rawValue !== "number" || Number.isNaN(rawValue)) {
     return defaultSettings.transitionMs;
   }
-  return Math.min(180, Math.max(60, Math.round(rawValue)));
+  return Math.min(220, Math.max(60, Math.round(rawValue)));
 }
 
 function loadSettings(): TeleprompterSettings {
@@ -109,6 +113,10 @@ function isDisplayOnlyWindow() {
   return new URLSearchParams(window.location.search).get("display") === "1";
 }
 
+function clampCursor(value: number, scriptLength: number) {
+  return Math.max(0, Math.min(value, scriptLength));
+}
+
 export default function App() {
   const displayOnly = isDisplayOnlyWindow();
   const [script, setScript] = useState(loadScript);
@@ -117,6 +125,7 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [wsUrl, setWsUrl] = useState(loadWsUrl);
   const [isDisplayWindowOpen, setIsDisplayWindowOpen] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
   const channelRef = useRef<BroadcastChannel | null>(null);
   const displayWindowRef = useRef<Window | null>(null);
   const sharedStateRef = useRef<DisplaySyncPayload>({
@@ -282,6 +291,33 @@ export default function App() {
     [settings]
   );
 
+  const appMode = useMemo<AppMode>(() => {
+    const combinedError = audioCapture.error ?? ws.lastError ?? manualError;
+    if (combinedError) {
+      return "error";
+    }
+    if (ws.connectionState === "connecting") {
+      return "connecting";
+    }
+    if (audioCapture.isCapturing && ws.backendState === "listening") {
+      return "listening";
+    }
+    if (ws.connectionState === "connected" && ws.backendState === "stopped") {
+      return "paused";
+    }
+    if (ws.connectionState === "connected") {
+      return "ready";
+    }
+    return "idle";
+  }, [
+    audioCapture.error,
+    audioCapture.isCapturing,
+    manualError,
+    ws.backendState,
+    ws.connectionState,
+    ws.lastError
+  ]);
+
   function updateSetting<K extends keyof TeleprompterSettings>(
     key: K,
     value: TeleprompterSettings[K]
@@ -289,57 +325,107 @@ export default function App() {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
-  function resetSample() {
-    setScript(sampleScript);
+  function replaceScript(nextScript: string) {
+    setScript(nextScript);
     setCursor(0);
     setIsPlaying(false);
+    setManualError(null);
+
+    if (ws.connectionState === "connected") {
+      ws.sendControl({ type: "start", script: nextScript });
+    }
+  }
+
+  function resetSample() {
+    replaceScript(sampleScript);
   }
 
   async function importScriptFile(file: File) {
-    const text = await file.text();
-    setScript(text);
-    setCursor(0);
-    setIsPlaying(false);
+    try {
+      const text = await file.text();
+      replaceScript(text);
+    } catch {
+      setManualError("导入脚本失败，请检查文件内容后重试。");
+    }
+  }
 
-    if (ws.connectionState === "connected") {
-      ws.sendControl({ type: "start", script: text });
+  async function pasteClipboardText() {
+    if (!navigator.clipboard?.readText) {
+      setManualError("当前浏览器不支持读取剪贴板，请直接在文本框里粘贴。");
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        setManualError("剪贴板里没有可用文本。");
+        return;
+      }
+      replaceScript(text);
+    } catch {
+      setManualError("读取剪贴板失败，请允许浏览器访问剪贴板。");
     }
   }
 
   async function handleConnect() {
+    setManualError(null);
     await ws.connect(wsUrl, script);
   }
 
   async function handleStartMic() {
     setIsPlaying(false);
+    setManualError(null);
 
-    if (ws.connectionState !== "connected") {
-      await ws.connect(wsUrl, script);
-    } else {
-      ws.sendControl({ type: "start", script });
+    try {
+      if (ws.connectionState !== "connected") {
+        await ws.connect(wsUrl, script);
+      } else {
+        ws.sendControl({ type: "start", script });
+      }
+
+      await audioCapture.start((frame) => {
+        ws.sendAudioFrame(frame);
+      });
+    } catch {
+      setManualError("启动麦克风失败，请检查麦克风权限和后端服务。");
     }
-
-    await audioCapture.start((frame) => {
-      ws.sendAudioFrame(frame);
-    });
   }
 
   async function handleStopMic() {
-    await audioCapture.stop();
-    ws.sendControl({ type: "stop" });
+    try {
+      await audioCapture.stop();
+      ws.sendControl({ type: "stop" });
+    } catch {
+      setManualError("停止麦克风时发生错误。");
+    }
+  }
+
+  function syncScriptToBackend() {
+    setManualError(null);
+    ws.sendControl({ type: "start", script });
+  }
+
+  function moveCursor(nextCursor: number) {
+    const safeValue = clampCursor(nextCursor, script.length);
+    setCursor(safeValue);
+    setIsPlaying(false);
+    if (ws.connectionState === "connected") {
+      ws.sendControl({ type: "seek", cursor: safeValue });
+    }
   }
 
   function handleCursorChange(nextCursor: number) {
-    setCursor(nextCursor);
-    setIsPlaying(false);
-    if (ws.connectionState === "connected") {
-      ws.sendControl({ type: "seek", cursor: nextCursor });
-    }
+    moveCursor(nextCursor);
+  }
+
+  function handleCursorNudge(delta: number) {
+    moveCursor(cursor + delta);
   }
 
   function handleResetCursor() {
     setCursor(0);
     setIsPlaying(false);
+    setManualError(null);
     if (ws.connectionState === "connected") {
       ws.sendControl({ type: "reset" });
       ws.sendControl({ type: "start", script });
@@ -354,6 +440,7 @@ export default function App() {
     );
 
     if (!opened) {
+      setManualError("副屏窗口被浏览器拦截了，请允许弹窗后重试。");
       return;
     }
 
@@ -400,11 +487,15 @@ export default function App() {
           onChange={setScript}
           onResetSample={resetSample}
           onImportFile={importScriptFile}
+          onPasteClipboard={() => {
+            void pasteClipboardText();
+          }}
         />
         <ConnectionPanel
           wsUrl={wsUrl}
           wsConnectionState={ws.connectionState}
           backendState={ws.backendState}
+          appMode={appMode}
           isCapturing={audioCapture.isCapturing}
           transcript={ws.transcript}
           latencyMs={ws.lastLatencyMs}
@@ -412,16 +503,17 @@ export default function App() {
           matchScore={ws.matchScore}
           matchedText={ws.matchedText}
           isCursorLost={ws.isCursorLost}
-          error={audioCapture.error ?? ws.lastError}
+          error={audioCapture.error ?? ws.lastError ?? manualError}
           onWsUrlChange={setWsUrl}
           onConnect={() => {
             void handleConnect();
           }}
           onDisconnect={() => {
+            setManualError(null);
             void audioCapture.stop();
             ws.disconnect();
           }}
-          onSyncScript={() => ws.sendControl({ type: "start", script })}
+          onSyncScript={syncScriptToBackend}
           onStartMic={() => {
             void handleStartMic();
           }}
@@ -447,19 +539,19 @@ export default function App() {
           onPlayToggle={() => setIsPlaying((value) => !value)}
           onResetCursor={handleResetCursor}
           onJumpToEnd={() => {
-            const end = script.length;
-            setCursor(end);
-            setIsPlaying(false);
-            if (ws.connectionState === "connected") {
-              ws.sendControl({ type: "seek", cursor: end });
-            }
+            moveCursor(script.length);
           }}
           onOpenDisplayWindow={openDisplayWindow}
         />
       </aside>
 
       <main className="preview">
-        <Teleprompter script={script} cursor={cursor} settings={settings} />
+        <Teleprompter
+          script={script}
+          cursor={cursor}
+          settings={settings}
+          onCursorNudge={handleCursorNudge}
+        />
       </main>
     </div>
   );

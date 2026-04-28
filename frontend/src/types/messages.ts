@@ -7,6 +7,13 @@ export type ClientControlMessage =
 export type BackendState = "ready" | "listening" | "stopped";
 export type ScreenMode = "single" | "dual";
 export type FontPreset = "serif" | "sans";
+export type AppMode =
+  | "idle"
+  | "connecting"
+  | "ready"
+  | "listening"
+  | "paused"
+  | "error";
 
 export type ServerMessage =
   | {

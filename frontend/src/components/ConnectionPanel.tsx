@@ -1,10 +1,11 @@
 import type { WSConnectionState } from "../hooks/useTeleprompterWS";
-import type { BackendState } from "../types/messages";
+import type { AppMode, BackendState } from "../types/messages";
 
 type ConnectionPanelProps = {
   wsUrl: string;
   wsConnectionState: WSConnectionState;
   backendState: BackendState | null;
+  appMode: AppMode;
   isCapturing: boolean;
   transcript: string;
   latencyMs: number | null;
@@ -38,10 +39,28 @@ function renderStateLabel(
   return "未连接";
 }
 
+function renderModeLabel(appMode: AppMode) {
+  switch (appMode) {
+    case "connecting":
+      return "正在连接后端";
+    case "ready":
+      return "已连接，等待开始识别";
+    case "listening":
+      return "正在根据声音驱动提词";
+    case "paused":
+      return "麦克风已暂停";
+    case "error":
+      return "当前有错误，请先处理";
+    default:
+      return "尚未连接识别服务";
+  }
+}
+
 export function ConnectionPanel({
   wsUrl,
   wsConnectionState,
   backendState,
+  appMode,
   isCapturing,
   transcript,
   latencyMs,
@@ -68,6 +87,11 @@ export function ConnectionPanel({
         <span className="status-pill">
           {renderStateLabel(wsConnectionState, backendState)}
         </span>
+      </div>
+
+      <div className="meta-row meta-row--banner">
+        <span>工作状态</span>
+        <strong>{renderModeLabel(appMode)}</strong>
       </div>
 
       <label className="field">
@@ -106,9 +130,7 @@ export function ConnectionPanel({
 
       <div className="meta-row">
         <span>采音状态: {isCapturing ? "采集中" : "未采集"}</span>
-        <span>
-          最近延迟: {latencyMs !== null ? `${latencyMs.toFixed(1)} ms` : "暂无"}
-        </span>
+        <span>最近延迟: {latencyMs !== null ? `${latencyMs.toFixed(1)} ms` : "暂无"}</span>
       </div>
 
       <div className="meta-row">
@@ -117,7 +139,9 @@ export function ConnectionPanel({
       </div>
 
       {isCursorLost ? (
-        <p className="warning-text">跟读位置暂时丢失，可以拖动当前位置重新对齐。</p>
+        <p className="warning-text">
+          跟读位置暂时丢失，可以拖动当前位置或滚动提词器重新对齐。
+        </p>
       ) : null}
 
       <div className="transcript-box">
