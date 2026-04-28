@@ -12,12 +12,13 @@
 
 ## 路径兼容
 
-项目里的 `.bat` 启动脚本已经改成跟随脚本自身目录运行。
+项目里只保留两个 `.bat` 入口。
 
 - 整个项目目录可以直接挪到别的盘符或文件夹
 - 便携包解压到新位置后也可以直接运行
 - 脚本会优先使用项目内的 `.venv`，找不到时才回退到系统 `py` 或 `python`
 - 如果 `.venv` 是从其他电脑或旧路径搬来的，`setup_portable_env.bat` 会检测并重建它
+- `setup_portable_env.bat` 只在当前文件夹里创建 `.venv`，不会安装到系统 Python 环境
 
 ## 当前已完成
 
@@ -40,6 +41,20 @@
 
 ## 运行方式
 
+### 日常使用
+
+1. 首次使用或换电脑后，双击：
+
+- `setup_portable_env.bat`
+
+2. 平时启动程序，双击：
+
+- `run_portable_app.bat`
+
+3. 打开浏览器：
+
+- `http://127.0.0.1:8000`
+
 ### 开发联调
 
 1. 启动后端
@@ -48,10 +63,6 @@
 python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
-也可以直接双击：
-
-- `run_backend_server.bat`
-
 2. 启动前端开发服务器
 
 ```powershell
@@ -59,10 +70,6 @@ cd frontend
 npm.cmd install
 npm.cmd run dev
 ```
-
-也可以直接双击：
-
-- `run_frontend_dev.bat`
 
 3. 打开浏览器
 
@@ -159,8 +166,8 @@ npm.cmd run test:e2e
 - 后端代码
 - 构建好的前端页面
 - 模型缓存（如果当前目录里已有 `.modelscope_cache`）
-- 启动脚本
-- 安装依赖脚本
+- `run_portable_app.bat`
+- `setup_portable_env.bat`
 - `LICENSE`
 - 新电脑迁移说明文档
 
