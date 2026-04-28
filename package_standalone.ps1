@@ -1,4 +1,10 @@
 param(
+  [ValidateSet("cpu", "cuda")]
+  [string]$TorchMode = "cpu",
+  [ValidateSet("cu121", "cu124", "cu126", "cu128")]
+  [string]$CudaVersion = "cu121",
+  [ValidateSet("sjtu", "aliyun", "official")]
+  [string]$TorchMirror = "sjtu",
   [switch]$RefreshRuntime
 )
 
@@ -6,15 +12,39 @@ $ErrorActionPreference = "Stop"
 
 $pythonVersion = "3.11.9"
 $pythonZipName = "python-$pythonVersion-embed-amd64.zip"
-$pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/$pythonZipName"
-$getPipUrl = "https://bootstrap.pypa.io/get-pip.py"
+$pythonUrls = @(
+  "https://mirrors.tuna.tsinghua.edu.cn/python/$pythonVersion/$pythonZipName",
+  "https://www.python.org/ftp/python/$pythonVersion/$pythonZipName"
+)
+$getPipUrls = @(
+  "https://bootstrap.pypa.io/get-pip.py"
+)
+$pipIndexUrl = "https://pypi.tuna.tsinghua.edu.cn/simple"
+$pipTrustedHost = "pypi.tuna.tsinghua.edu.cn"
+$npmRegistryUrl = "https://registry.npmmirror.com"
+$pipNetworkArgs = @("--retries", "10", "--resume-retries", "10", "--timeout", "120")
+$torchMirrorBase = switch ($TorchMirror) {
+  "sjtu" { "https://mirror.sjtu.edu.cn/pytorch-wheels" }
+  "aliyun" { "https://mirrors.aliyun.com/pytorch-wheels" }
+  default { "https://download.pytorch.org/whl" }
+}
+$torchChannel = if ($TorchMode -eq "cuda") { $CudaVersion } else { "cpu" }
+$torchIndexUrl = "$torchMirrorBase/$torchChannel"
+$torchInstallMode = if ($TorchMode -eq "cuda") { "--force-reinstall" } else { "--upgrade" }
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $releaseRoot = Join-Path $projectRoot "release"
 $downloadRoot = Join-Path $releaseRoot "_downloads"
 $runtimeCacheRoot = Join-Path $releaseRoot "_runtime_cache"
-$pythonCacheRoot = Join-Path $runtimeCacheRoot "python-$pythonVersion"
-$bundleName = "cueflow-teleprompter-standalone"
+$runtimeName = "python-$pythonVersion-$TorchMode"
+if ($TorchMode -eq "cuda") {
+  $runtimeName = "python-$pythonVersion-$TorchMode-$CudaVersion"
+}
+$pythonCacheRoot = Join-Path $runtimeCacheRoot $runtimeName
+$bundleName = "cueflow-teleprompter-standalone-$TorchMode"
+if ($TorchMode -eq "cuda") {
+  $bundleName = "cueflow-teleprompter-standalone-gpu-$CudaVersion"
+}
 $bundleRoot = Join-Path $releaseRoot $bundleName
 $zipPath = Join-Path $releaseRoot "$bundleName.zip"
 
@@ -28,6 +58,29 @@ function Invoke-Checked {
   if ($LASTEXITCODE -ne 0) {
     throw "Command failed: $FilePath $($Arguments -join ' ')"
   }
+}
+
+function Save-FirstAvailable {
+  param(
+    [string[]]$Urls,
+    [string]$OutFile
+  )
+
+  $errors = New-Object System.Collections.Generic.List[string]
+  foreach ($url in $Urls) {
+    try {
+      Write-Host "[Download] $url"
+      Invoke-WebRequest -Uri $url -OutFile $OutFile
+      return
+    } catch {
+      $errors.Add($_.Exception.Message)
+      if (Test-Path $OutFile) {
+        Remove-Item -LiteralPath $OutFile -Force
+      }
+    }
+  }
+
+  throw "All downloads failed: $($errors -join '; ')"
 }
 
 function Enable-EmbeddedPythonSite {
@@ -101,7 +154,7 @@ function Initialize-PythonRuntime {
     $pythonZip = Join-Path $downloadRoot $pythonZipName
     if (-not (Test-Path $pythonZip)) {
       Write-Host "[Runtime] Download Python $pythonVersion..."
-      Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonZip
+      Save-FirstAvailable -Urls $pythonUrls -OutFile $pythonZip
     }
 
     Write-Host "[Runtime] Extract Python..."
@@ -112,19 +165,19 @@ function Initialize-PythonRuntime {
     $getPip = Join-Path $downloadRoot "get-pip.py"
     if (-not (Test-Path $getPip)) {
       Write-Host "[Runtime] Download pip bootstrap..."
-      Invoke-WebRequest -Uri $getPipUrl -OutFile $getPip
+      Save-FirstAvailable -Urls $getPipUrls -OutFile $getPip
     }
 
     Write-Host "[Runtime] Install pip..."
-    Invoke-Checked $pythonExe @($getPip, "--no-warn-script-location")
+    Invoke-Checked $pythonExe (@($getPip, "--no-warn-script-location", "-i", $pipIndexUrl, "--trusted-host", $pipTrustedHost) + $pipNetworkArgs)
   } else {
     Enable-EmbeddedPythonSite -PythonRoot $pythonCacheRoot
   }
 
-  Write-Host "[Runtime] Install Python dependencies into embedded runtime..."
-  Invoke-Checked $pythonExe @("-m", "pip", "install", "--upgrade", "pip", "--no-warn-script-location")
-  Invoke-Checked $pythonExe @("-m", "pip", "install", "--upgrade", "torch", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cpu", "--no-warn-script-location")
-  Invoke-Checked $pythonExe @("-m", "pip", "install", "--upgrade", "-r", (Join-Path $projectRoot "requirements.txt"), "--no-warn-script-location")
+  Write-Host "[Runtime] Install Python dependencies into embedded runtime ($TorchMode)..."
+  Invoke-Checked $pythonExe (@("-m", "pip", "install", "--upgrade", "pip", "--no-warn-script-location", "-i", $pipIndexUrl, "--trusted-host", $pipTrustedHost) + $pipNetworkArgs)
+  Invoke-Checked $pythonExe (@("-m", "pip", "install", $torchInstallMode, "torch", "torchaudio", "--index-url", $torchIndexUrl, "--no-warn-script-location") + $pipNetworkArgs)
+  Invoke-Checked $pythonExe (@("-m", "pip", "install", "-r", (Join-Path $projectRoot "requirements.txt"), "--no-warn-script-location", "-i", $pipIndexUrl, "--trusted-host", $pipTrustedHost) + $pipNetworkArgs)
 }
 
 function New-StartScript {
@@ -136,6 +189,8 @@ function New-StartScript {
     "set ""APP_DIR=%~dp0""",
     "cd /d ""%APP_DIR%""",
     "set ""PYTHONUTF8=1""",
+    "set ""PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple""",
+    "set ""PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn""",
     "set ""MODELSCOPE_CACHE=%APP_DIR%.modelscope_cache""",
     "set ""HF_HOME=%APP_DIR%.modelscope_cache\hf""",
     "set ""PATH=%APP_DIR%runtime\python;%APP_DIR%runtime\python\Scripts;%PATH%""",
@@ -154,7 +209,16 @@ function New-StartScript {
     "  exit /b 1",
     ")",
     "",
-    "echo [CueFlow] Starting...",
+    "echo Select runtime mode:",
+    "echo   1. Auto  - use GPU if available",
+    "echo   2. GPU   - force NVIDIA CUDA",
+    "echo   3. CPU   - force CPU fallback",
+    "set /p CUEFLOW_MODE=Mode [1/2/3, default 1]: ",
+    "if ""%CUEFLOW_MODE%""==""2"" set ""TELEPROMPTER_DEVICE=cuda:0""",
+    "if ""%CUEFLOW_MODE%""==""3"" set ""TELEPROMPTER_DEVICE=cpu""",
+    "if not defined TELEPROMPTER_DEVICE set ""TELEPROMPTER_DEVICE=auto""",
+    "",
+    "echo [CueFlow] Starting with TELEPROMPTER_DEVICE=%TELEPROMPTER_DEVICE%",
     "echo URL: http://127.0.0.1:8000",
     "echo.",
     "start """" ""http://127.0.0.1:8000""",
@@ -170,7 +234,7 @@ function New-StartScript {
 
 Write-Host "[1/5] Build frontend..."
 Push-Location (Join-Path $projectRoot "frontend")
-Invoke-Checked "npm.cmd" @("install")
+Invoke-Checked "npm.cmd" @("install", "--registry", $npmRegistryUrl)
 Invoke-Checked "npm.cmd" @("run", "build")
 Pop-Location
 
@@ -219,6 +283,6 @@ Write-Host "Standalone zip:"
 Write-Host $zipPath
 Write-Host ""
 Write-Host "Next:"
-Write-Host "  1. Copy cueflow-teleprompter-standalone.zip to a clean Windows PC."
+Write-Host "  1. Copy $bundleName.zip to a clean Windows PC."
 Write-Host "  2. Extract it."
 Write-Host "  3. Double-click start_cueflow.bat."

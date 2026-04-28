@@ -51,9 +51,21 @@ FAIL_BEFORE_EXPAND = 5
 SENTENCE_ENDINGS = "。！？!?；;"
 
 LOG_TRANSCRIPT_TEXT = True
-DEFAULT_DEVICE = os.getenv(
-    "TELEPROMPTER_DEVICE", "cuda:0" if torch.cuda.is_available() else "cpu"
-)
+
+
+def resolve_device() -> str:
+    requested = os.getenv("TELEPROMPTER_DEVICE", "auto").strip().lower()
+
+    if requested in {"", "auto"}:
+        return "cuda:0" if torch.cuda.is_available() else "cpu"
+
+    if requested.startswith("cuda") and not torch.cuda.is_available():
+        return "cpu"
+
+    return requested
+
+
+DEFAULT_DEVICE = resolve_device()
 
 
 def resolve_model_source() -> str:

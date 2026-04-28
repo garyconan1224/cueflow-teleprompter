@@ -47,9 +47,13 @@
 
 - `setup_portable_env.bat`
 
+安装时可选择 `CPU` 或 `GPU CUDA 12.1` PyTorch 运行时；有 NVIDIA 显卡的电脑建议选 `GPU`。
+
 2. 平时启动程序，双击：
 
 - `run_portable_app.bat`
+
+启动时可选择 `Auto / GPU / CPU` 模式。`Auto` 会优先使用可用的 NVIDIA 显卡，否则自动回退 CPU。
 
 3. 打开浏览器：
 
@@ -181,10 +185,18 @@ npm.cmd run test:e2e
 
 它会生成：
 
-- `release/cueflow-teleprompter-standalone/`
-- `release/cueflow-teleprompter-standalone.zip`
+- `release/cueflow-teleprompter-standalone-cpu/`
+- `release/cueflow-teleprompter-standalone-cpu.zip`
 
 这个包会自带 Python 和依赖。新电脑不需要预先安装 Python 或 Node.js，解压后双击 `start_cueflow.bat` 即可启动。
+
+如果目标电脑有 NVIDIA 显卡，建议在 `standalone-runtime` 分支构建 GPU 包：
+
+```powershell
+& .\package_standalone.ps1 -TorchMode cuda -CudaVersion cu121
+```
+
+启动时 `start_cueflow.bat` 会提供 `Auto / GPU / CPU` 三种模式。`setup_portable_env.bat` 和 standalone 打包脚本的普通 PyPI 下载都默认使用清华大学镜像，standalone 打包时的前端依赖默认使用 `npmmirror`，PyTorch CPU/CUDA 轮子默认使用上海交大 PyTorch wheels 镜像。
 
 ## 目录说明
 

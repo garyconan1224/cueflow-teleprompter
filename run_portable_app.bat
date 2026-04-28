@@ -2,6 +2,8 @@
 setlocal
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
+set "PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple"
+set "PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn"
 
 set "PYTHON_CMD="
 set "PYTHON_ARGS="
@@ -60,7 +62,17 @@ if not exist "%SCRIPT_DIR%frontend\dist\index.html" (
   exit /b 1
 )
 
+echo Select runtime mode:
+echo   1. Auto  - use GPU if available
+echo   2. GPU   - force NVIDIA CUDA
+echo   3. CPU   - force CPU fallback
+set /p CUEFLOW_MODE=Mode [1/2/3, default 1]:
+if "%CUEFLOW_MODE%"=="2" set "TELEPROMPTER_DEVICE=cuda:0"
+if "%CUEFLOW_MODE%"=="3" set "TELEPROMPTER_DEVICE=cpu"
+if not defined TELEPROMPTER_DEVICE set "TELEPROMPTER_DEVICE=auto"
+
 echo [Portable] Start integrated teleprompter service...
+echo Runtime: %TELEPROMPTER_DEVICE%
 echo URL: http://127.0.0.1:8000
 echo.
 

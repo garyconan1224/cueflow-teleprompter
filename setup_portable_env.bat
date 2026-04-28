@@ -2,6 +2,8 @@
 setlocal
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
+set "PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple"
+set "PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn"
 
 set "PYTHON_BOOTSTRAP="
 set "PYTHON_BOOTSTRAP_ARGS="
@@ -63,7 +65,7 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 echo [Setup] Upgrade pip...
-call ".venv\Scripts\python.exe" -m pip install --upgrade pip
+call ".venv\Scripts\python.exe" -m pip install --upgrade pip -i "%PIP_INDEX_URL%" --trusted-host "%PIP_TRUSTED_HOST%" --retries 10 --resume-retries 10 --timeout 120
 if errorlevel 1 (
   echo.
   echo [Error] Failed to upgrade pip.
@@ -71,8 +73,27 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo.
+echo Select PyTorch runtime:
+echo   1. CPU  - safest fallback, works on any Windows PC
+echo   2. GPU  - NVIDIA CUDA 12.1, faster ASR but much larger download
+set /p TORCH_MODE=Mode [1/2, default 1]:
+set "TORCH_INDEX_URL=https://mirror.sjtu.edu.cn/pytorch-wheels/cpu"
+set "TORCH_INSTALL_MODE=--upgrade"
+if "%TORCH_MODE%"=="2" set "TORCH_INDEX_URL=https://mirror.sjtu.edu.cn/pytorch-wheels/cu121"
+if "%TORCH_MODE%"=="2" set "TORCH_INSTALL_MODE=--force-reinstall"
+
+echo [Setup] Install PyTorch runtime...
+call ".venv\Scripts\python.exe" -m pip install %TORCH_INSTALL_MODE% torch torchaudio --index-url "%TORCH_INDEX_URL%" --retries 10 --resume-retries 10 --timeout 120
+if errorlevel 1 (
+  echo.
+  echo [Error] Failed to install PyTorch runtime.
+  pause
+  exit /b 1
+)
+
 echo [Setup] Install Python dependencies...
-call ".venv\Scripts\python.exe" -m pip install -r requirements.txt
+call ".venv\Scripts\python.exe" -m pip install -r requirements.txt -i "%PIP_INDEX_URL%" --trusted-host "%PIP_TRUSTED_HOST%" --retries 10 --resume-retries 10 --timeout 120
 if errorlevel 1 (
   echo.
   echo [Error] Failed to install Python dependencies.

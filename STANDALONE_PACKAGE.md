@@ -21,6 +21,21 @@ Run this from the project root:
 & .\package_standalone.ps1
 ```
 
+This builds the CPU package.
+
+For an NVIDIA laptop or desktop, build the CUDA package:
+
+```powershell
+& .\package_standalone.ps1 -TorchMode cuda -CudaVersion cu121
+```
+
+By default, PyTorch CPU/CUDA wheels are downloaded from the Shanghai Jiao Tong University PyTorch wheel mirror. If that mirror is unavailable, switch mirrors:
+
+```powershell
+& .\package_standalone.ps1 -TorchMode cuda -CudaVersion cu121 -TorchMirror aliyun
+& .\package_standalone.ps1 -TorchMode cuda -CudaVersion cu121 -TorchMirror official
+```
+
 The first build can take a long time because it downloads embedded Python and installs the Python dependency stack into `release/_runtime_cache`.
 
 To rebuild the embedded runtime from scratch:
@@ -31,17 +46,27 @@ To rebuild the embedded runtime from scratch:
 
 ## Output
 
-The script creates:
+CPU build:
 
-- `release/cueflow-teleprompter-standalone/`
-- `release/cueflow-teleprompter-standalone.zip`
+- `release/cueflow-teleprompter-standalone-cpu/`
+- `release/cueflow-teleprompter-standalone-cpu.zip`
+
+CUDA build:
+
+- `release/cueflow-teleprompter-standalone-gpu-cu121/`
+- `release/cueflow-teleprompter-standalone-gpu-cu121.zip`
 
 On a clean Windows computer:
 
-1. Extract `cueflow-teleprompter-standalone.zip`.
+1. Extract the zip.
 2. Double-click `start_cueflow.bat`.
-3. Open `http://127.0.0.1:8000` if the browser does not open automatically.
+3. Select `Auto`, `GPU`, or `CPU` in the startup menu.
+4. Open `http://127.0.0.1:8000` if the browser does not open automatically.
 
 ## Notes
 
-This package uses CPU PyTorch wheels by default so it can run without requiring the target computer to have CUDA installed. If the target machine has a CUDA setup and you want GPU acceleration, build a separate runtime with matching CUDA PyTorch wheels.
+The CPU package is the safest fallback, but ASR can be slow on laptops.
+
+The CUDA package is larger, but it is the recommended package for NVIDIA machines. If GPU mode is selected on a machine without CUDA support, the backend falls back to CPU.
+
+Pip installs use the Tsinghua PyPI mirror by default. Frontend package installs use the `npmmirror` registry during packaging. PyTorch CPU/CUDA wheels use the selected PyTorch wheel mirror, with `sjtu` as the default.
