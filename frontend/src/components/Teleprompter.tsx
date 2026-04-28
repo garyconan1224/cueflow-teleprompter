@@ -1,10 +1,13 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TeleprompterSettings } from "../types/messages";
 
 type TeleprompterProps = {
   script: string;
   cursor: number;
   settings: TeleprompterSettings;
+  title?: string;
+  showFullscreenButton?: boolean;
+  compactHeader?: boolean;
 };
 
 const CURRENT_WINDOW = 28;
@@ -12,17 +15,32 @@ const CURRENT_WINDOW = 28;
 export function Teleprompter({
   script,
   cursor,
-  settings
+  settings,
+  title = "智能提词器调参台",
+  showFullscreenButton = true,
+  compactHeader = false
 }: TeleprompterProps) {
+  const stageRef = useRef<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const anchorRef = useRef<HTMLSpanElement | null>(null);
   const [translateY, setTranslateY] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const safeCursor = Math.max(0, Math.min(cursor, script.length));
   const before = script.slice(0, safeCursor);
   const current = script.slice(safeCursor, safeCursor + CURRENT_WINDOW) || " ";
   const after = script.slice(safeCursor + CURRENT_WINDOW);
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === stageRef.current);
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -54,19 +72,44 @@ export function Teleprompter({
   ]);
 
   const progress = script.length > 0 ? (safeCursor / script.length) * 100 : 0;
+  const fontFamily =
+    settings.fontPreset === "sans"
+      ? '"Aptos","Segoe UI","Microsoft YaHei",sans-serif'
+      : '"Georgia","Times New Roman","SimSun",serif';
+
+  async function toggleFullscreen() {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+
+    if (document.fullscreenElement === stage) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await stage.requestFullscreen();
+  }
 
   return (
-    <section className="stage">
+    <section className="stage" ref={stageRef}>
       <div className="stage__header">
         <div>
-          <p className="eyebrow">Preview</p>
-          <h1>智能提词器调参台</h1>
+          <p className="eyebrow">{compactHeader ? "Display" : "Preview"}</p>
+          <h1>{title}</h1>
         </div>
-        <div className="stage__meta">
-          <span>进度 {progress.toFixed(1)}%</span>
-          <span>
-            游标 {safeCursor}/{script.length}
-          </span>
+        <div className="stage__actions">
+          <div className="stage__meta">
+            <span>进度 {progress.toFixed(1)}%</span>
+            <span>
+              游标 {safeCursor}/{script.length}
+            </span>
+          </div>
+          {showFullscreenButton ? (
+            <button className="ghost-button" type="button" onClick={toggleFullscreen}>
+              {isFullscreen ? "退出全屏" : "提词器全屏"}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -88,7 +131,8 @@ export function Teleprompter({
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
             maxWidth: `${settings.textWidth}%`,
-            letterSpacing: `${settings.letterSpacing}px`
+            letterSpacing: `${settings.letterSpacing}px`,
+            fontFamily
           }}
         >
           {!script.trim() ? (

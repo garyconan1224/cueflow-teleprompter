@@ -1,16 +1,34 @@
-import { startTransition, useEffect, useMemo, useState } from "react";
+import {
+  startTransition,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties
+} from "react";
 import { ConnectionPanel } from "./components/ConnectionPanel";
 import { ControlPanel } from "./components/ControlPanel";
 import { ScriptEditor } from "./components/ScriptEditor";
 import { Teleprompter } from "./components/Teleprompter";
 import { useAudioCapture } from "./hooks/useAudioCapture";
 import { useTeleprompterWS } from "./hooks/useTeleprompterWS";
-import type { TeleprompterSettings } from "./types/messages";
+import type { ScreenMode, TeleprompterSettings } from "./types/messages";
 import { sampleScript } from "./utils/sampleScript";
 
 const SETTINGS_STORAGE_KEY = "voice-teleprompter:settings";
 const SCRIPT_STORAGE_KEY = "voice-teleprompter:script";
 const WS_URL_STORAGE_KEY = "voice-teleprompter:ws-url";
+const DISPLAY_CHANNEL_NAME = "voice-teleprompter-display-sync";
+
+type DisplaySyncPayload = {
+  script: string;
+  cursor: number;
+  settings: TeleprompterSettings;
+};
+
+type DisplaySyncMessage =
+  | { type: "state-sync"; payload: DisplaySyncPayload }
+  | { type: "request-sync" };
 
 const defaultSettings: TeleprompterSettings = {
   fontSize: 42,
@@ -21,7 +39,20 @@ const defaultSettings: TeleprompterSettings = {
   textWidth: 84,
   letterSpacing: 1.2,
   dimReadText: true,
-  previewSpeed: 10
+  previewSpeed: 10,
+  screenMode: "single",
+  fontPreset: "serif",
+  appBackgroundStart: "#f3d39b",
+  appBackgroundEnd: "#ead8b2",
+  workspaceBackground: "#fff7e9",
+  panelBackground: "#fffaf1",
+  teleprompterBackgroundTop: "#1e140d",
+  teleprompterBackgroundBottom: "#100b07",
+  readTextColor: "#baa48a",
+  currentTextColor: "#fff9f0",
+  upcomingTextColor: "#f3dfc2",
+  guideColor: "#f7b86f",
+  currentAccentColor: "#ffbe72"
 };
 
 function loadSettings(): TeleprompterSettings {
@@ -48,48 +79,142 @@ function loadWsUrl() {
   );
 }
 
+function isDisplayOnlyWindow() {
+  return new URLSearchParams(window.location.search).get("display") === "1";
+}
+
 export default function App() {
+  const displayOnly = isDisplayOnlyWindow();
   const [script, setScript] = useState(loadScript);
   const [settings, setSettings] = useState(loadSettings);
   const [cursor, setCursor] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [wsUrl, setWsUrl] = useState(loadWsUrl);
+  const [isDisplayWindowOpen, setIsDisplayWindowOpen] = useState(false);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const displayWindowRef = useRef<Window | null>(null);
+  const sharedStateRef = useRef<DisplaySyncPayload>({
+    script,
+    cursor,
+    settings
+  });
   const ws = useTeleprompterWS();
   const audioCapture = useAudioCapture();
 
   useEffect(() => {
+    sharedStateRef.current = { script, cursor, settings };
+  }, [script, cursor, settings]);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel(DISPLAY_CHANNEL_NAME);
+    channelRef.current = channel;
+
+    channel.onmessage = (event: MessageEvent<DisplaySyncMessage>) => {
+      const data = event.data;
+
+      if (displayOnly) {
+        if (data.type === "state-sync") {
+          startTransition(() => {
+            setScript(data.payload.script);
+            setCursor(data.payload.cursor);
+            setSettings(data.payload.settings);
+          });
+        }
+        return;
+      }
+
+      if (data.type === "request-sync") {
+        channel.postMessage({
+          type: "state-sync",
+          payload: sharedStateRef.current
+        } satisfies DisplaySyncMessage);
+      }
+    };
+
+    if (displayOnly) {
+      channel.postMessage({ type: "request-sync" } satisfies DisplaySyncMessage);
+    }
+
+    return () => {
+      channel.close();
+      channelRef.current = null;
+    };
+  }, [displayOnly]);
+
+  useEffect(() => {
+    if (displayOnly) {
+      return;
+    }
+
+    channelRef.current?.postMessage({
+      type: "state-sync",
+      payload: { script, cursor, settings }
+    } satisfies DisplaySyncMessage);
+  }, [cursor, displayOnly, script, settings]);
+
+  useEffect(() => {
+    if (displayOnly) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      const isOpen = !!displayWindowRef.current && !displayWindowRef.current.closed;
+      setIsDisplayWindowOpen(isOpen);
+      if (!isOpen) {
+        displayWindowRef.current = null;
+      }
+    }, 600);
+
+    return () => window.clearInterval(timer);
+  }, [displayOnly]);
+
+  useEffect(() => {
+    if (displayOnly) {
+      return;
+    }
+
     window.localStorage.setItem(SCRIPT_STORAGE_KEY, script);
     if (cursor > script.length) {
       setCursor(script.length);
     }
-  }, [cursor, script]);
+  }, [cursor, displayOnly, script]);
 
   useEffect(() => {
+    if (displayOnly) {
+      return;
+    }
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
+  }, [displayOnly, settings]);
 
   useEffect(() => {
+    if (displayOnly) {
+      return;
+    }
     window.localStorage.setItem(WS_URL_STORAGE_KEY, wsUrl);
-  }, [wsUrl]);
+  }, [displayOnly, wsUrl]);
 
   useEffect(() => {
+    if (displayOnly) {
+      return;
+    }
     if (ws.connectionState === "idle" && audioCapture.isCapturing) {
       void audioCapture.stop();
     }
-  }, [audioCapture, ws.connectionState, audioCapture.isCapturing]);
+  }, [audioCapture, displayOnly, ws.connectionState]);
 
   useEffect(() => {
-    if (ws.cursorPosition === null) {
+    if (displayOnly || ws.cursorPosition === null) {
       return;
     }
+
     startTransition(() => {
       setCursor(Math.min(script.length, ws.cursorPosition ?? 0));
       setIsPlaying(false);
     });
-  }, [script.length, ws.cursorPosition]);
+  }, [displayOnly, script.length, ws.cursorPosition]);
 
   useEffect(() => {
-    if (!isPlaying) {
+    if (displayOnly || !isPlaying) {
       return;
     }
 
@@ -106,12 +231,30 @@ export default function App() {
     }, intervalMs);
 
     return () => window.clearInterval(timer);
-  }, [isPlaying, script.length, settings.previewSpeed]);
+  }, [displayOnly, isPlaying, script.length, settings.previewSpeed]);
 
   const summary = useMemo(() => {
     const completion = script.length ? Math.round((cursor / script.length) * 100) : 0;
-    return `${completion}% · ${settings.fontSize}px · ${settings.viewportHeight}px`;
+    return `进度 ${completion}% · 字号 ${settings.fontSize}px · 视窗 ${settings.viewportHeight}px`;
   }, [cursor, script.length, settings.fontSize, settings.viewportHeight]);
+
+  const appStyle = useMemo(
+    () =>
+      ({
+        "--app-bg-start": settings.appBackgroundStart,
+        "--app-bg-end": settings.appBackgroundEnd,
+        "--workspace-bg": settings.workspaceBackground,
+        "--panel-bg": settings.panelBackground,
+        "--teleprompter-bg-top": settings.teleprompterBackgroundTop,
+        "--teleprompter-bg-bottom": settings.teleprompterBackgroundBottom,
+        "--teleprompter-read-color": settings.readTextColor,
+        "--teleprompter-current-color": settings.currentTextColor,
+        "--teleprompter-upcoming-color": settings.upcomingTextColor,
+        "--teleprompter-guide-color": settings.guideColor,
+        "--teleprompter-current-accent": settings.currentAccentColor
+      }) as CSSProperties,
+    [settings]
+  );
 
   function updateSetting<K extends keyof TeleprompterSettings>(
     key: K,
@@ -164,8 +307,49 @@ export default function App() {
     }
   }
 
+  function openDisplayWindow() {
+    const opened = window.open(
+      `${window.location.pathname}?display=1`,
+      "TeleprompterDisplay",
+      "popup=yes,width=1440,height=900"
+    );
+
+    if (!opened) {
+      return;
+    }
+
+    displayWindowRef.current = opened;
+    opened.focus();
+    setIsDisplayWindowOpen(true);
+    channelRef.current?.postMessage({
+      type: "state-sync",
+      payload: { script, cursor, settings }
+    } satisfies DisplaySyncMessage);
+  }
+
+  function handleScreenModeChange(mode: ScreenMode) {
+    updateSetting("screenMode", mode);
+    if (mode === "dual") {
+      openDisplayWindow();
+    }
+  }
+
+  if (displayOnly) {
+    return (
+      <div className="display-window" style={appStyle}>
+        <Teleprompter
+          script={script}
+          cursor={cursor}
+          settings={settings}
+          title="副屏提词器"
+          compactHeader
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={appStyle}>
       <aside className="workspace">
         <div className="workspace__top">
           <p className="eyebrow">Workspace</p>
@@ -209,9 +393,16 @@ export default function App() {
           cursor={cursor}
           maxCursor={script.length}
           isPlaying={isPlaying}
+          isDisplayWindowOpen={isDisplayWindowOpen}
           settings={settings}
           onCursorChange={handleCursorChange}
-          onSettingsChange={updateSetting}
+          onSettingsChange={(key, value) => {
+            if (key === "screenMode") {
+              handleScreenModeChange(value as ScreenMode);
+              return;
+            }
+            updateSetting(key, value);
+          }}
           onPlayToggle={() => setIsPlaying((value) => !value)}
           onResetCursor={handleResetCursor}
           onJumpToEnd={() => {
@@ -222,6 +413,7 @@ export default function App() {
               ws.sendControl({ type: "seek", cursor: end });
             }
           }}
+          onOpenDisplayWindow={openDisplayWindow}
         />
       </aside>
 

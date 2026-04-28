@@ -1,9 +1,20 @@
 :root {
   color-scheme: light;
   font-family: "Aptos", "Segoe UI", sans-serif;
+  --app-bg-start: #f3d39b;
+  --app-bg-end: #ead8b2;
+  --workspace-bg: #fff7e9;
+  --panel-bg: #fffaf1;
+  --teleprompter-bg-top: #1e140d;
+  --teleprompter-bg-bottom: #100b07;
+  --teleprompter-read-color: #baa48a;
+  --teleprompter-current-color: #fff9f0;
+  --teleprompter-upcoming-color: #f3dfc2;
+  --teleprompter-guide-color: #f7b86f;
+  --teleprompter-current-accent: #ffbe72;
   background:
-    radial-gradient(circle at top, rgba(240, 196, 120, 0.24), transparent 38%),
-    linear-gradient(135deg, #f6edd8 0%, #efe3c7 46%, #ead8b2 100%);
+    radial-gradient(circle at top, color-mix(in srgb, var(--app-bg-start) 38%, transparent), transparent 38%),
+    linear-gradient(135deg, var(--app-bg-start) 0%, color-mix(in srgb, var(--app-bg-start) 45%, var(--app-bg-end)) 46%, var(--app-bg-end) 100%);
   color: #26190d;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,6 +35,9 @@ body,
 
 body {
   min-height: 100vh;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--app-bg-start) 38%, transparent), transparent 38%),
+    linear-gradient(135deg, var(--app-bg-start) 0%, color-mix(in srgb, var(--app-bg-start) 45%, var(--app-bg-end)) 46%, var(--app-bg-end) 100%);
 }
 
 button,
@@ -44,7 +58,7 @@ textarea {
   gap: 18px;
   padding: 24px 20px;
   border-right: 1px solid rgba(64, 40, 17, 0.1);
-  background: rgba(255, 249, 235, 0.78);
+  background: color-mix(in srgb, var(--workspace-bg) 86%, transparent);
   backdrop-filter: blur(14px);
 }
 
@@ -79,7 +93,7 @@ textarea {
 .stage {
   border: 1px solid rgba(65, 43, 18, 0.1);
   border-radius: 24px;
-  background: rgba(255, 252, 245, 0.78);
+  background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
   box-shadow: 0 24px 60px rgba(87, 55, 25, 0.1);
 }
 
@@ -161,6 +175,27 @@ h2 {
   margin-top: 10px;
 }
 
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.choice-button {
+  border-radius: 999px;
+  border: 1px solid rgba(90, 57, 25, 0.14);
+  padding: 9px 14px;
+  cursor: pointer;
+  background: rgba(255, 252, 246, 0.92);
+  color: #3e2813;
+}
+
+.choice-button--active {
+  background: linear-gradient(135deg, #a8581d, #cf8445);
+  color: #fffaf4;
+  border-color: transparent;
+}
+
 .primary-button,
 .ghost-button {
   border-radius: 999px;
@@ -187,6 +222,30 @@ h2 {
   background: rgba(255, 252, 246, 0.94);
   border-color: rgba(90, 57, 25, 0.14);
   color: #3e2813;
+}
+
+.color-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.color-field {
+  margin-top: 0;
+}
+
+.color-input-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.color-input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid rgba(91, 58, 26, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
+  cursor: pointer;
 }
 
 .slider {
@@ -255,9 +314,9 @@ h2 {
   background:
     linear-gradient(
       180deg,
-      rgba(31, 21, 12, 0.9) 0%,
-      rgba(25, 17, 10, 0.98) 16%,
-      rgba(23, 16, 9, 1) 100%
+      var(--teleprompter-bg-top) 0%,
+      color-mix(in srgb, var(--teleprompter-bg-top) 50%, var(--teleprompter-bg-bottom)) 16%,
+      var(--teleprompter-bg-bottom) 100%
     );
 }
 
@@ -286,8 +345,14 @@ h2 {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px dashed rgba(253, 197, 132, 0.65);
+  border-top: 1px dashed var(--teleprompter-guide-color);
   z-index: 3;
+}
+
+.stage__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .teleprompter__content {
@@ -307,21 +372,25 @@ h2 {
 }
 
 .teleprompter__read {
-  color: rgba(255, 235, 205, 0.86);
+  color: var(--teleprompter-read-color);
 }
 
 .teleprompter__read--dim {
-  color: rgba(185, 161, 131, 0.46);
+  color: color-mix(in srgb, var(--teleprompter-read-color) 54%, transparent);
 }
 
 .teleprompter__current {
-  color: #fff9f0;
-  background: linear-gradient(180deg, rgba(255, 193, 120, 0.18), rgba(255, 193, 120, 0));
+  color: var(--teleprompter-current-color);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--teleprompter-current-accent) 26%, transparent),
+    transparent
+  );
   border-radius: 8px;
 }
 
 .teleprompter__upcoming {
-  color: rgba(255, 240, 217, 0.78);
+  color: var(--teleprompter-upcoming-color);
 }
 
 .teleprompter__anchor {
@@ -355,6 +424,14 @@ h2 {
   transition: width 180ms ease-out;
 }
 
+.display-window {
+  min-height: 100vh;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 1024px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -367,6 +444,11 @@ h2 {
 
   .preview {
     padding: 20px;
+  }
+
+  .stage__actions {
+    flex-direction: column;
+    align-items: flex-end;
   }
 }
 

@@ -33,11 +33,16 @@ ASR_CHUNK_BYTES = ASR_CHUNK_SAMPLES * BYTES_PER_SAMPLE
 LOOKAHEAD_WINDOW = 200
 MATCH_LOOKBACK = 20
 RECENT_TEXT_SECONDS = 8
-MATCH_THRESHOLD = 70
-LOOKAHEAD_PUSH = 15
+MATCH_THRESHOLD_PARTIAL = 86
+MATCH_THRESHOLD_FINAL = 74
+LOOKAHEAD_PUSH_PARTIAL = 0
+LOOKAHEAD_PUSH_FINAL = 6
 MONOTONIC = True
 MIN_ADVANCE = 2
+MAX_ADVANCE_PARTIAL = 8
+MAX_ADVANCE_FINAL = 18
 FAIL_BEFORE_EXPAND = 5
+SENTENCE_ENDINGS = "。！？!?；;"
 
 LOG_TRANSCRIPT_TEXT = True
 DEFAULT_DEVICE = os.getenv(
@@ -47,8 +52,8 @@ DEFAULT_DEVICE = os.getenv(
 
 def resolve_model_source() -> str:
     """
-    优先使用本地已缓存模型，避免服务启动时再次联网下载。
-    如果本地模型不存在，再回退到 FunASR 模型 ID。
+    Prefer the local cached model to avoid downloading on every service start.
+    Fall back to the FunASR model id if the local cache does not exist yet.
     """
     if LOCAL_STREAMING_MODEL_DIR.exists():
         return str(LOCAL_STREAMING_MODEL_DIR)

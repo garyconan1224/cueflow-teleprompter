@@ -5,6 +5,8 @@ export type ClientControlMessage =
   | { type: "seek"; cursor: number };
 
 export type BackendState = "ready" | "listening" | "stopped";
+export type ScreenMode = "single" | "dual";
+export type FontPreset = "serif" | "sans";
 
 export type ServerMessage =
   | {
@@ -38,4 +40,17 @@ export type TeleprompterSettings = {
   letterSpacing: number;
   dimReadText: boolean;
   previewSpeed: number;
+  screenMode: ScreenMode;
+  fontPreset: FontPreset;
+  appBackgroundStart: string;
+  appBackgroundEnd: string;
+  workspaceBackground: string;
+  panelBackground: string;
+  teleprompterBackgroundTop: string;
+  teleprompterBackgroundBottom: string;
+  readTextColor: string;
+  currentTextColor: string;
+  upcomingTextColor: string;
+  guideColor: string;
+  currentAccentColor: string;
 };

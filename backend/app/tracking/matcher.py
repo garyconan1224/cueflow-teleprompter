@@ -20,10 +20,6 @@ class CursorUpdateResult:
 
 
 def normalize_for_match(text: str) -> str:
-    """
-    ASR 一般不带标点，脚本里却可能有换行、逗号、句号。
-    这里先把空白和常见标点剥掉，再做模糊匹配，容错会稳定很多。
-    """
     return _PUNCT_OR_SPACE_RE.sub("", text)
 
 
@@ -33,6 +29,7 @@ def update_cursor(
     cursor: int,
     recent_text: str,
     fail_count: int,
+    is_final: bool,
 ) -> CursorUpdateResult:
     normalized_recent = normalize_for_match(recent_text)
     if len(normalized_recent) < 4:
@@ -63,7 +60,10 @@ def update_cursor(
 
     result = fuzz.partial_ratio_alignment(normalized_recent, normalized_window)
     score = float(result.score)
-    if score < config.MATCH_THRESHOLD:
+    threshold = (
+        config.MATCH_THRESHOLD_FINAL if is_final else config.MATCH_THRESHOLD_PARTIAL
+    )
+    if score < threshold:
         return CursorUpdateResult(
             position=cursor,
             score=score,
@@ -73,7 +73,18 @@ def update_cursor(
         )
 
     matched_end = _normalized_end_to_original_index(index_map, result.dest_end)
-    new_cursor = min(len(script), window_start + matched_end + config.LOOKAHEAD_PUSH)
+    match_end_position = min(len(script), window_start + matched_end)
+    push = config.LOOKAHEAD_PUSH_FINAL if is_final else config.LOOKAHEAD_PUSH_PARTIAL
+    new_cursor = min(len(script), match_end_position + push)
+    max_advance = config.MAX_ADVANCE_FINAL if is_final else config.MAX_ADVANCE_PARTIAL
+    new_cursor = min(new_cursor, cursor + max_advance)
+    new_cursor = _clamp_for_sentence_boundary(
+        script=script,
+        cursor=cursor,
+        match_end_position=match_end_position,
+        proposed_cursor=new_cursor,
+        is_final=is_final,
+    )
 
     if config.MONOTONIC and new_cursor < cursor + config.MIN_ADVANCE:
         return CursorUpdateResult(
@@ -121,3 +132,30 @@ def _safe_excerpt(text: str, start: int, end: int) -> str:
     safe_start = max(0, min(start, len(text)))
     safe_end = max(safe_start, min(end, len(text)))
     return text[safe_start:safe_end]
+
+
+def _clamp_for_sentence_boundary(
+    *,
+    script: str,
+    cursor: int,
+    match_end_position: int,
+    proposed_cursor: int,
+    is_final: bool,
+) -> int:
+    if proposed_cursor <= cursor:
+        return proposed_cursor
+
+    for index in range(cursor, min(proposed_cursor, len(script))):
+        if script[index] not in config.SENTENCE_ENDINGS:
+            continue
+
+        boundary_after = index + 1
+        if not is_final:
+            return min(proposed_cursor, index)
+
+        # Final results may cross the sentence end only after the match itself
+        # has actually reached that boundary, not only because of lookahead push.
+        if match_end_position < boundary_after:
+            return min(proposed_cursor, index)
+
+    return proposed_cursor

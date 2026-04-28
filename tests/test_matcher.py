@@ -13,6 +13,7 @@ class MatcherTests(unittest.TestCase):
             cursor=0,
             recent_text="欢迎大家来体验达摩院推出的语音识别模型",
             fail_count=0,
+            is_final=True,
         )
         self.assertTrue(result.updated)
         self.assertGreater(result.position, 0)
@@ -25,6 +26,7 @@ class MatcherTests(unittest.TestCase):
             cursor=10,
             recent_text="完全不相关的句子",
             fail_count=0,
+            is_final=False,
         )
         self.assertFalse(result.updated)
         self.assertEqual(result.position, 10)
@@ -36,9 +38,22 @@ class MatcherTests(unittest.TestCase):
             cursor=0,
             recent_text="目标句子在这里",
             fail_count=5,
+            is_final=True,
         )
         self.assertTrue(result.updated)
         self.assertGreater(result.position, 0)
+
+    def test_partial_match_does_not_jump_to_next_sentence(self) -> None:
+        script = "欢迎大家来体验达摩院推出的语音识别模型。这是下一句。"
+        result = update_cursor(
+            script=script,
+            cursor=0,
+            recent_text="欢迎大家来体验达摩院推出的语音识别模型",
+            fail_count=0,
+            is_final=False,
+        )
+        self.assertTrue(result.updated)
+        self.assertLessEqual(result.position, script.index("。"))
 
 
 if __name__ == "__main__":

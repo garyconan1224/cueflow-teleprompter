@@ -1,5 +1,5 @@
-import type { BackendState } from "../types/messages";
 import type { WSConnectionState } from "../hooks/useTeleprompterWS";
+import type { BackendState } from "../types/messages";
 
 type ConnectionPanelProps = {
   wsUrl: string;

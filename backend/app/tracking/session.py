@@ -62,6 +62,7 @@ class TrackingSession:
             cursor=self.cursor,
             recent_text=recent_text,
             fail_count=self.fail_count,
+            is_final=is_final,
         )
         self.fail_count = result.fail_count
         self.last_score = result.score
@@ -99,5 +100,5 @@ class TrackingSession:
             self.recent_chunks.popleft()
 
     def _shrink_after_success(self) -> None:
-        while len(self.recent_chunks) > 2:
+        while len(self.recent_chunks) > 1:
             self.recent_chunks.popleft()

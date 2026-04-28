@@ -88,6 +88,7 @@ export function useTeleprompterWS() {
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(String(event.data)) as ServerMessage;
+
           if (payload.type === "status") {
             setState((current) => ({ ...current, backendState: payload.state }));
             return;
