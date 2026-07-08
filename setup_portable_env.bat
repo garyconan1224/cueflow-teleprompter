@@ -80,6 +80,23 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo [Setup] Build frontend...
+call "%SCRIPT_DIR%build_frontend.bat"
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+
+echo [Setup] Pre-download speech model ^(about 900MB, one-time^)...
+call ".venv\Scripts\python.exe" backend\scripts\download_models.py
+if errorlevel 1 (
+  echo.
+  echo [Error] Failed to pre-download the speech model.
+  echo Check your network connection and run setup_portable_env.bat again.
+  pause
+  exit /b 1
+)
+
 echo.
 echo Setup finished.
 echo Use run_portable_app.bat to start the integrated app.

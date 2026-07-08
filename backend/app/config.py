@@ -13,6 +13,13 @@ LOCAL_STREAMING_MODEL_DIR = (
     / "iic"
     / "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
 )
+LOCAL_STREAMING_MODEL_SNAPSHOT = (
+    MODEL_CACHE_DIR
+    / "models"
+    / "iic--speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online"
+    / "snapshots"
+    / "master"
+)
 DEFAULT_STREAMING_MODEL_ID = "paraformer-zh-streaming"
 
 WS_PATH = "/ws/teleprompter"
@@ -61,6 +68,7 @@ def resolve_model_source() -> str:
     Prefer the local cached model to avoid downloading on every service start.
     Fall back to the FunASR model id if the local cache does not exist yet.
     """
-    if LOCAL_STREAMING_MODEL_DIR.exists():
-        return str(LOCAL_STREAMING_MODEL_DIR)
+    for candidate in (LOCAL_STREAMING_MODEL_DIR, LOCAL_STREAMING_MODEL_SNAPSHOT):
+        if (candidate / "model.pt").exists():
+            return str(candidate)
     return DEFAULT_STREAMING_MODEL_ID

@@ -17,7 +17,7 @@ logging.basicConfig(
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 
-app = FastAPI(title="CueFlow Teleprompter Backend", version="0.3.0")
+app = FastAPI(title="智能提词器 Backend", version="0.3.0")
 engine = StreamingASREngine()
 app.include_router(create_websocket_router(engine))
 

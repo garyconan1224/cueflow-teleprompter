@@ -31,6 +31,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot "TRANSFER_TO_NEW_PC.md") -Destina
 Copy-Item -LiteralPath (Join-Path $projectRoot "phase1_asr_test.py") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "run_portable_app.bat") -Destination $bundleRoot
 Copy-Item -LiteralPath (Join-Path $projectRoot "setup_portable_env.bat") -Destination $bundleRoot
+Copy-Item -LiteralPath (Join-Path $projectRoot "build_frontend.bat") -Destination $bundleRoot
 
 $modelCache = Join-Path $projectRoot ".modelscope_cache"
 if (Test-Path $modelCache) {

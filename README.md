@@ -1,6 +1,6 @@
-# CueFlow Teleprompter
+# 智能提词器
 
-`CueFlow Teleprompter` 是一个本地运行的中文语音提词器。
+`智能提词器` 是一个本地运行的中文语音提词器。
 
 浏览器负责编辑脚本、采集麦克风和显示提词器；后端负责流式语音识别、游标追踪，并通过 WebSocket 把当前位置实时推回前端，让提词内容跟着朗读自动上滑。
 
@@ -8,7 +8,7 @@
 
 - 仓库地址：`https://github.com/garyconan1224/cueflow-teleprompter`
 - 开源协议：`MIT`
-- GitHub 页面配置建议见 [GITHUB_REPO_SETUP.md](GITHUB_REPO_SETUP.md)
+- GitHub 页面配置建议见 [第一次下载先读我.md](第一次下载先读我.md)
 
 ## 路径兼容
 
