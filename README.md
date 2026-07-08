@@ -26,6 +26,7 @@
 - `Phase 2` FastAPI WebSocket 识别服务
 - `Phase 3` 浏览器采音到后端识别的完整链路
 - `Phase 4` 语音驱动的游标追踪、自动上滑、单双屏、全屏
+- `Phase 5` UI 重构：浮动侧栏、智能居中、可折叠面板、毛玻璃效果
 - 使用增强：直接粘贴文本、导入脚本文件、鼠标滚轮微调位置、当前位置轻量高亮、状态提示、错误提示
 - 工程增强：模型预下载脚本、后端测试、前端联调级自动化测试、便携打包脚本
 
@@ -103,12 +104,37 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 
 ## 页面操作说明
 
+### 侧栏管理
+
+- 点击左上角 **☰** 按钮可展开/收起侧栏，获得更大的提词器视野。
+- 侧栏收起后提词器自动在全视口居中；侧栏打开时提词器在剩余空间智能居中。
+- 侧栏内点击每个面板的**标题栏**可折叠/展开该面板（脚本编辑 / 后端识别链路 / 提词器控制台）。
+- 侧栏顶部有”收起 ✕”按钮，也可直接关闭侧栏。
+
+### 提词操作
+
 1. 在左侧粘贴或导入脚本。
-2. 点击“连接后端”。
-3. 点击“开始麦克风识别”。
+2. 点击”连接后端”。
+3. 点击”开始麦克风识别”。
 4. 提词内容会根据语音识别结果自动向上滑动，并尽量把当前朗读位置停在虚线附近。
 5. 你可以直接用鼠标滚轮微调当前位置，按住 `Shift` 时会更快跳动。
-6. 如果位置丢失，可以拖动“当前位置”滑块，或者在提词器里滚轮回调重新对齐。
+6. 如果位置丢失，可以拖动”当前位置”滑块，或者在提词器里滚轮回调重新对齐。
+
+## 界面截图
+
+> 运行应用后截图，替换以下占位图片。
+
+### 完整界面（侧栏展开）
+
+<!-- ![完整界面](./screenshots/full-view.png) -->
+
+### 侧栏收起（全屏提词）
+
+<!-- ![侧栏收起](./screenshots/sidebar-closed.png) -->
+
+### 面板折叠（紧凑布局）
+
+<!-- ![面板折叠](./screenshots/panels-collapsed.png) -->
 
 ## 常用测试
 
@@ -178,7 +204,10 @@ npm.cmd run test:e2e
 - [backend/app/asr/engine.py](backend/app/asr/engine.py): FunASR 封装
 - [backend/app/tracking/matcher.py](backend/app/tracking/matcher.py): 游标模糊匹配和推进逻辑
 - [backend/app/tracking/session.py](backend/app/tracking/session.py): 跟读会话状态
-- [frontend/src/App.tsx](frontend/src/App.tsx): 页面主状态、单双屏同步、联动控制
-- [frontend/src/components/ScriptEditor.tsx](frontend/src/components/ScriptEditor.tsx): 脚本编辑、粘贴、导入
+- [frontend/src/App.tsx](frontend/src/App.tsx): 页面主状态、单双屏同步、浮动侧栏切换、智能居中
+- [frontend/src/components/ScriptEditor.tsx](frontend/src/components/ScriptEditor.tsx): 脚本编辑、粘贴、导入、可折叠面板
 - [frontend/src/components/Teleprompter.tsx](frontend/src/components/Teleprompter.tsx): 提词显示、自动滑动、滚轮微调、全屏
+- [frontend/src/components/ConnectionPanel.tsx](frontend/src/components/ConnectionPanel.tsx): WebSocket 连接、麦克风控制、转写监控、可折叠面板
+- [frontend/src/components/ControlPanel.tsx](frontend/src/components/ControlPanel.tsx): 提词器参数调节、主题配色、可折叠面板
+- [frontend/src/styles.css](frontend/src/styles.css): 全局样式、浮动侧栏动画、折叠面板过渡
 - [frontend/tests/teleprompter.spec.ts](frontend/tests/teleprompter.spec.ts): 前端联调级自动化测试
