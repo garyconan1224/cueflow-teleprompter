@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { WSConnectionState } from "../hooks/useTeleprompterWS";
 import type { AppMode, BackendState } from "../types/messages";
 
@@ -14,6 +15,7 @@ type ConnectionPanelProps = {
   matchedText: string;
   isCursorLost: boolean;
   error: string | null;
+  defaultExpanded?: boolean;
   onWsUrlChange: (value: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
@@ -69,6 +71,7 @@ export function ConnectionPanel({
   matchedText,
   isCursorLost,
   error,
+  defaultExpanded = false,
   onWsUrlChange,
   onConnect,
   onDisconnect,
@@ -77,17 +80,31 @@ export function ConnectionPanel({
   onStopMic,
   onClearTranscript
 }: ConnectionPanelProps) {
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
   return (
-    <section className="panel">
+    <section className={`panel${" panel--collapsible"}`}>
       <div className="panel__header">
-        <div>
+        <div
+          onClick={() => setCollapsed((v) => !v)}
+        >
           <p className="eyebrow">Live Link</p>
-          <h2>后端识别链路</h2>
+          <h2>
+            后端识别链路
+            <span
+              className={`panel__collapse-icon${collapsed ? " panel__collapse-icon--collapsed" : ""}`}
+            >
+              ▾
+            </span>
+          </h2>
         </div>
         <span className="status-pill">
           {renderStateLabel(wsConnectionState, backendState)}
         </span>
       </div>
+
+      <div
+        className={`panel__body${collapsed ? " panel__body--collapsed" : ""}`}
+      >
 
       <div className="meta-row meta-row--banner">
         <span>工作状态</span>
@@ -153,6 +170,7 @@ export function ConnectionPanel({
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
+      </div>
     </section>
   );
 }

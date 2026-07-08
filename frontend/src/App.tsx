@@ -41,7 +41,7 @@ const defaultSettings: TeleprompterSettings = {
   viewportHeight: 72,
   anchorRatio: 0.32,
   transitionMs: 160,
-  textWidth: 84,
+  textWidth: 90,
   letterSpacing: 1.2,
   dimReadText: true,
   previewSpeed: 10,
@@ -163,6 +163,7 @@ export default function App() {
   const [wsUrl, setWsUrl] = useState(loadWsUrl);
   const [isDisplayWindowOpen, setIsDisplayWindowOpen] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dynamicTransitionMs, setDynamicTransitionMs] = useState(
     defaultSettings.transitionMs
   );
@@ -387,9 +388,10 @@ export default function App() {
         "--teleprompter-current-color": settings.currentTextColor,
         "--teleprompter-upcoming-color": settings.upcomingTextColor,
         "--teleprompter-guide-color": settings.guideColor,
-        "--teleprompter-current-accent": settings.currentAccentColor
+        "--teleprompter-current-accent": settings.currentAccentColor,
+        "--sidebar-width": sidebarOpen ? "360px" : "0px"
       }) as CSSProperties,
-    [settings]
+    [settings, sidebarOpen]
   );
 
   const teleprompterSettings = useMemo(
@@ -594,10 +596,27 @@ export default function App() {
 
   return (
     <div className="app-shell" style={appStyle}>
-      <aside className="workspace">
+      <button
+        className={`workspace__toggle${sidebarOpen ? " workspace__toggle--sidebar-open" : ""}`}
+        onClick={() => setSidebarOpen((v) => !v)}
+        aria-label={sidebarOpen ? "收起侧栏" : "展开侧栏"}
+        title={sidebarOpen ? "收起侧栏" : "展开侧栏"}
+        type="button"
+      >
+        {sidebarOpen ? "✕" : "☰"}
+      </button>
+
+      <aside className={`workspace${sidebarOpen ? "" : " workspace--closed"}`}>
         <div className="workspace__top">
           <p className="eyebrow">Workspace</p>
           <span className="workspace__summary">{summary}</span>
+          <button
+            className="ghost-button"
+            onClick={() => setSidebarOpen(false)}
+            type="button"
+          >
+            收起 ✕
+          </button>
         </div>
 
         <ScriptEditor

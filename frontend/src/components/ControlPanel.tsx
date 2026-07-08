@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   FontPreset,
   ScreenMode,
@@ -10,6 +11,7 @@ type ControlPanelProps = {
   isPlaying: boolean;
   isDisplayWindowOpen: boolean;
   settings: TeleprompterSettings;
+  defaultExpanded?: boolean;
   onCursorChange: (value: number) => void;
   onSettingsChange: <K extends keyof TeleprompterSettings>(
     key: K,
@@ -129,6 +131,7 @@ export function ControlPanel({
   isPlaying,
   isDisplayWindowOpen,
   settings,
+  defaultExpanded = false,
   onCursorChange,
   onSettingsChange,
   onPlayToggle,
@@ -136,16 +139,29 @@ export function ControlPanel({
   onJumpToEnd,
   onOpenDisplayWindow
 }: ControlPanelProps) {
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
   return (
-    <section className="panel">
+    <section className={`panel${" panel--collapsible"}`}>
       <div className="panel__header">
-        <div>
+        <div
+          onClick={() => setCollapsed((v) => !v)}
+        >
           <p className="eyebrow">Controls</p>
-          <h2>提词器控制台</h2>
+          <h2>
+            提词器控制台
+            <span
+              className={`panel__collapse-icon${collapsed ? " panel__collapse-icon--collapsed" : ""}`}
+            >
+              ▾
+            </span>
+          </h2>
         </div>
       </div>
 
-      <div className="button-row">
+      <div
+        className={`panel__body${collapsed ? " panel__body--collapsed" : ""}`}
+      >
+        <div className="button-row">
         <button className="primary-button" onClick={onPlayToggle} type="button">
           {isPlaying ? "暂停预览" : "自动预览"}
         </button>
@@ -335,6 +351,7 @@ export function ControlPanel({
             onChange={(value) => onSettingsChange("currentAccentColor", value)}
           />
         </div>
+      </div>
       </div>
     </section>
   );

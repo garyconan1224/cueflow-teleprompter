@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, WheelEvent } from "react";
 import type { TeleprompterSettings } from "../types/messages";
 
+const VIEWPORT_CHROME_HEIGHT = 240;
+
 type TeleprompterProps = {
   script: string;
   cursor: number;
@@ -114,7 +116,7 @@ export function Teleprompter({
     }
 
     return {
-      height: `min(${settings.viewportHeight}vh, calc(100vh - 180px))`
+      height: `min(${settings.viewportHeight}vh, calc(100vh - ${VIEWPORT_CHROME_HEIGHT}px))`
     };
   }, [compactHeader, isFullscreen, settings.viewportHeight]);
 
