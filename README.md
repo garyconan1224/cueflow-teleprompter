@@ -122,19 +122,17 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 
 ## 界面截图
 
-> 运行应用后截图，替换以下占位图片。
+### 完整界面（侧栏展开，所有面板可见）
 
-### 完整界面（侧栏展开）
+![完整界面](./screenshots/full-view.png)
 
-<!-- ![完整界面](./screenshots/full-view.png) -->
+### 侧栏收起（全屏提词器视图）
 
-### 侧栏收起（全屏提词）
+![侧栏收起](./screenshots/sidebar-closed.png)
 
-<!-- ![侧栏收起](./screenshots/sidebar-closed.png) -->
+### 面板折叠（仅展开脚本编辑器，其余折叠）
 
-### 面板折叠（紧凑布局）
-
-<!-- ![面板折叠](./screenshots/panels-collapsed.png) -->
+![面板折叠](./screenshots/panels-collapsed.png)
 
 ## 常用测试
 
