@@ -13,7 +13,7 @@
 ### Description
 
 ```text
-A local Chinese voice-controlled teleprompter with real-time ASR, cursor tracking, WebSocket sync, and fullscreen browser display.
+一个本地运行的中文语音提词器，支持实时 ASR 跟读追踪、浮动侧栏、智能居中、可折叠面板、全屏显示。
 ```
 
 ### Website
@@ -44,6 +44,8 @@ websocket
 funasr
 rapidfuzz
 chinese
+typescript
+asr
 ```
 
 ## Release 命名建议
@@ -61,9 +63,9 @@ GitHub 仓库支持上传一张社交预览图。
 建议内容：
 
 - 标题：`CueFlow Teleprompter`
-- 副标题：`Chinese Voice-Controlled Teleprompter`
-- 关键点：`FastAPI + React + FunASR + WebSocket`
-- 画面：提词器全屏界面截图
+- 副标题：`中文语音智能提词器`
+- 关键点：`FastAPI + React + FunASR + WebSocket · 浮动侧栏 · 智能居中`
+- 画面：侧栏收起后的全屏提词器界面截图
 
 ## README 顶部展示建议
 
