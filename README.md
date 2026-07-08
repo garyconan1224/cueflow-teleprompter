@@ -6,7 +6,7 @@
 
 ## 仓库信息
 
-- 仓库地址：`https://github.com/garyconan1224/cueflow-teleprompter`
+- 仓库地址：`https://github.com/garyconan1224/voice-teleprompter`
 - 开源协议：`MIT`
 - GitHub 页面配置建议见 [第一次下载先读我.md](第一次下载先读我.md)
 
